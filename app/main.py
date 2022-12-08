@@ -54,8 +54,9 @@ GEN3_CREDENTIALS = {
 
 statetable = None
 SUBMISSION = None
-QUERY = None
+# QUERY = None
 SESSION = None
+ROOT = None
 
 sgqlc = SimpleGraphQLClient()
 f = Filter()
@@ -73,23 +74,25 @@ async def start_up():
 
     try:
         global SUBMISSION
-        global QUERY
+        # global QUERY
         AUTH = Gen3Auth(endpoint=Gen3Config.GEN3_ENDPOINT_URL,
                         refresh_token=GEN3_CREDENTIALS)
         SUBMISSION = Gen3Submission(AUTH)
-        QUERY = Gen3Query(AUTH)
+        # QUERY = Gen3Query(AUTH)
     except Exception:
         print("Encounter an error while creating the GEN3 auth.")
 
     try:
         # This function is used to connect to the iRODS server, it requires "host", "port", "user", "password" and "zone" environment variables.
         global SESSION
+        global ROOT
         SESSION = iRODSSession(host=iRODSConfig.IRODS_HOST,
                                port=iRODSConfig.IRODS_PORT,
                                user=iRODSConfig.IRODS_USER,
                                password=iRODSConfig.IRODS_PASSWORD,
                                zone=iRODSConfig.IRODS_ZONE)
         # SESSION.connection_timeout =
+        ROOT = SESSION.collections.get(iRODSConfig.IRODS_ENDPOINT_URL)
     except Exception:
         print("Encounter an error while creating the iRODS session.")
 
@@ -501,10 +504,10 @@ async def get_irods_root_collections():
     Return all collections from the root folder.
     """
     try:
-        collect = SESSION.collections.get(
-            f"{iRODSConfig.IRODS_ENDPOINT_URL}")
-        folders = get_collection_list(collect.subcollections)
-        files = get_collection_list(collect.data_objects)
+        # collect = SESSION.collections.get(
+        #     f"{iRODSConfig.IRODS_ENDPOINT_URL}")
+        folders = get_collection_list(ROOT.subcollections)
+        files = get_collection_list(ROOT.data_objects)
     except Exception as e:
         raise HTTPException(status_code=INTERNAL_SERVER_ERROR, detail=str(e))
     return {"folders": folders, "files": files}
