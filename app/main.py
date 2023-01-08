@@ -1,8 +1,7 @@
-import json
+import re
 import mimetypes
 
 from app.config import Config, Gen3Config, iRODSConfig
-from app.dbtable import StateTable
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,15 +13,66 @@ from enum import Enum
 
 from gen3.auth import Gen3Auth
 from gen3.submission import Gen3Submission
-from gen3.query import Gen3Query
 
 from app.sgqlc import SimpleGraphQLClient
-from app.filter import Filter
+from app.filter import Filter, FIELDS
 
 from irods.session import iRODSSession
+from app.search import Search
+
+description = """
+## Gen3
+
+You will be able to:
+
+* **Get Gen3 program/project**
+* **Get Gen3 node dictionary**
+* **Get Gen3 record(s) metadata**
+* **Use GraphQL query Gen3 metadata**
+* **Download Gen3 file**
+
+## iRODS
+
+You will be able to:
+
+* **Get iRODS root/sub-folder(s)/sub-file(s)**
+* **Download iRODS file**
+"""
+
+tags_metadata = [
+    {
+        "name": "Gen3",
+        "description": "Gen3 is a data platform for building data commons and data ecosystems",
+        "externalDocs": {
+            "description": "Gen3 official website",
+            "url": "https://gen3.org/",
+        },
+    },
+    {
+        "name": "iRODS",
+        "description": "iRODS is an open source data management software",
+        "externalDocs": {
+            "description": "iRODS official website",
+            "url": "https://irods.org/",
+        },
+    },
+]
 
 app = FastAPI(
-    title="12 Labours Portal APIs"
+    title="12 Labours Portal",
+    description=description,
+    # version="0.0.1",
+    # terms_of_service="http://example.com/terms/",
+    contact={
+        "name": "Auckland Bioengineering Institute",
+        "url": "https://www.auckland.ac.nz/en/abi.html",
+        "email": "bioeng-enquiries@auckland.ac.nz",
+    },
+    # license_info={
+    #     "name": "Apache 2.0",
+    #     "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+    # }
+    openapi_tags=tags_metadata
 )
 
 # Cross orgins, allow any for now
@@ -42,33 +92,29 @@ app.add_middleware(
 BAD_REQUEST = 400
 UNAUTHORIZED = 401
 NOT_FOUND = 404
+METHOD_NOT_ALLOWED = 405
+INTERNAL_SERVER_ERROR = 500
 
-GEN3_CREDENTIALS = {
-    "api_key": Gen3Config.GEN3_API_KEY,
-    "key_id": Gen3Config.GEN3_KEY_ID
-}
 
-statetable = None
 SUBMISSION = None
-QUERY = None
 SESSION = None
+
+sgqlc = SimpleGraphQLClient()
+f = Filter()
+s = Search()
 
 
 @ app.on_event("startup")
 async def start_up():
     try:
-        global statetable
-        statetable = StateTable(Config.DATABASE_URL)
-    except AttributeError:
-        print("Encounter an error setting up the database")
-        statetable = None
-
-    try:
         global SUBMISSION
-        global QUERY
-        AUTH = Gen3Auth(refresh_token=GEN3_CREDENTIALS)
+        GEN3_CREDENTIALS = {
+            "api_key": Gen3Config.GEN3_API_KEY,
+            "key_id": Gen3Config.GEN3_KEY_ID
+        }
+        AUTH = Gen3Auth(endpoint=Gen3Config.GEN3_ENDPOINT_URL,
+                        refresh_token=GEN3_CREDENTIALS)
         SUBMISSION = Gen3Submission(AUTH)
-        QUERY = Gen3Query(AUTH)
     except Exception:
         print("Encounter an error while creating the GEN3 auth.")
 
@@ -85,77 +131,51 @@ async def start_up():
         print("Encounter an error while creating the iRODS session.")
 
 
-@ app.get("/", response_class=PlainTextResponse)
+@ app.get("/", tags=["Root"], response_class=PlainTextResponse)
 async def root():
     return "This is the fastapi backend."
-
-
-@ app.get("/health", response_class=PlainTextResponse)
-async def health():
-    return json.dumps({"status": "healthy"})
-
-
-def get_share_link(table):
-    # Do not commit to database when testing
-    commit = True
-    if app.config["TESTING"]:
-        commit = False
-    if table:
-        json_data = request.get_json()
-        if json_data and "state" in json_data:
-            state = json_data["state"]
-            uuid = table.pushState(state, commit)
-            return {"uuid": uuid}
-        abort(400, description="State not specified")
-    else:
-        abort(404, description="Database not available")
-
-
-def get_saved_state(table):
-    if table:
-        json_data = request.get_json()
-        if json_data and "uuid" in json_data:
-            uuid = json_data["uuid"]
-            state = table.pullState(uuid)
-            if state:
-                return {"state": table.pullState(uuid)}
-        abort(400, description="Key missing or did not find a match")
-    else:
-        abort(404, description="Database not available")
-
-
-# An example
-@ app.put("/state/getshareid")
-async def get_share_link():
-    return get_share_link(statetable)
-
-
-# Get the map state using the share link id.
-@ app.get("/state/getstate")
-async def get_state():
-    return get_saved_state(statetable)
 
 
 #
 # Gen3 Data Commons
 #
-class program(str, Enum):
+
+
+@ app.get("/program", tags=["Gen3"])
+async def get_gen3_program():
+    """
+    Return all programs information from the Gen3 Data Commons.
+    """
+    try:
+        program = SUBMISSION.get_programs()
+        program_dict = {"program": []}
+        for ele in program["links"]:
+            program_dict["program"].append(ele.replace("/v0/submission/", ""))
+        return program_dict
+    except Exception as e:
+        raise HTTPException(status_code=NOT_FOUND, detail=str(e))
+
+
+class Program(str, Enum):
     program = "demo1"
 
 
-class project(str, Enum):
-    project = "12L"
+@ app.get("/project/{program}", tags=["Gen3"])
+async def get_gen3_project(program: Program):
+    """
+    Return all projects information from a program.
 
-
-class node(str, Enum):
-    experiment = "experiment"
-    dataset_description = "dataset_description"
-    manifest = "manifest"
-
-
-class format(str, Enum):
-    json = "json"
-    tsv = "tsv"
+    :param program: Gen3 program name.
+    """
+    try:
+        project = SUBMISSION.get_projects(program)
+        project_dict = {"project": []}
+        for ele in project["links"]:
+            project_dict["project"].append(
+                ele.replace(f"/v0/submission/{program}/", ""))
+        return project_dict
+    except Exception as e:
+        raise HTTPException(status_code=NOT_FOUND, detail=str(e))
 
 
 class Gen3Item(BaseModel):
@@ -171,59 +191,7 @@ class Gen3Item(BaseModel):
         }
 
 
-class GraphQLItem(BaseModel):
-    limit: Union[int, None] = 50
-    page: Union[int, None] = 1
-    node: Union[str, None] = None
-    filter: Union[dict, None] = None
-    search: Union[str, None] = None
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "limit": 50,
-                "page": 1,
-                "node": "experiment",
-                "filter": {},
-                "search": ""
-            }
-        }
-
-
-@ app.get("/program")
-async def get_gen3_program():
-    """
-    Return all programs' information from the Gen3 Data Commons.
-    """
-    try:
-        program = SUBMISSION.get_programs()
-        program_dict = {"program": []}
-        for ele in program["links"]:
-            program_dict["program"].append(ele.replace("/v0/submission/", ""))
-        return program_dict
-    except Exception as e:
-        raise HTTPException(status_code=NOT_FOUND, detail=str(e))
-
-
-@ app.get("/project/{program}")
-async def get_gen3_project(program: program):
-    """
-    Return all projects' information from a program.
-
-    :param program: Gen3 program name.
-    """
-    try:
-        project = SUBMISSION.get_projects(program)
-        project_dict = {"project": []}
-        for ele in project["links"]:
-            project_dict["project"].append(
-                ele.replace(f"/v0/submission/{program}/", ""))
-        return project_dict
-    except Exception as e:
-        raise HTTPException(status_code=NOT_FOUND, detail=str(e))
-
-
-@ app.post("/dictionary")
+@ app.post("/dictionary", tags=["Gen3"])
 async def get_gen3_dictionary(item: Gen3Item):
     """
     Return all dictionary nodes from the Gen3 Data Commons
@@ -245,10 +213,16 @@ async def get_gen3_dictionary(item: Gen3Item):
             status_code=NOT_FOUND, detail=f"Program {item.program} or project {item.project} not found")
 
 
-@ app.post("/records/{node}")
-async def get_gen3_node_records(node: node, item: Gen3Item):
+class Node(str, Enum):
+    experiment = "experiment"
+    dataset_description = "dataset_description"
+    manifest = "manifest"
+
+
+@ app.post("/records/{node}", tags=["Gen3"])
+async def get_gen3_node_records(node: Node, item: Gen3Item):
     """
-    Return all records' information in a dictionary node.
+    Return all records information in a dictionary node.
 
     :param node: The dictionary node to export.
     :return: A list of json object containing all records in the dictionary node.
@@ -272,10 +246,10 @@ async def get_gen3_node_records(node: node, item: Gen3Item):
         return node_record
 
 
-@ app.post("/record/{uuid}")
+@ app.post("/record/{uuid}", tags=["Gen3"])
 async def get_gen3_record(uuid: str, item: Gen3Item):
     """
-    Return record's information in the Gen3 Data Commons.
+    Return record information in the Gen3 Data Commons.
 
     :param uuid: uuid of the record.
     :return: A list of json object.
@@ -291,111 +265,167 @@ async def get_gen3_record(uuid: str, item: Gen3Item):
             raise HTTPException(status_code=UNAUTHORIZED,
                                 detail=record["message"])
         raise HTTPException(
-            status_code=NOT_FOUND, detail=record["message"]+" and check if uses the correct project or uuid is used")
+            status_code=NOT_FOUND, detail=record["message"]+" and check if the correct project or uuid is used")
     else:
         return record
 
 
-def merge_item_filter(item):
-    # AND relationship
-    count_filter = 0
-    id_dict = {}
-    filter_dict = {"submitter_id": []}
-    if item.filter != {}:
-        # Create a id dict to count the frequency of occurrence
-        for key in item.filter.keys():
-            count_filter += 1
-            for ele in item.filter[key]:
-                if ele not in id_dict.keys():
-                    id_dict[ele] = 1
-                else:
-                    id_dict[ele] += 1
-        # Find the matched id and add them into the dict with key submitter_id
-        for id in id_dict.keys():
-            if id_dict[id] == max(id_dict.values()):
-                filter_dict["submitter_id"].append(id)
-        # Replace the filter with created dict
-        item.filter = filter_dict
+class GraphQLQueryItem(BaseModel):
+    page: Union[int, None] = 1
+    limit: Union[int, None] = 0
+    node: Union[str, None] = None
+    filter: Union[dict, None] = {}
+    search: Union[str, None] = ""
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "node": "dataset_description",
+                "filter": {
+                    "submitter_id": [
+                        "dataset-<dataset_id>-version-<version_id>-dataset_description"
+                    ]
+                },
+                "search": "",
+            }
+        }
 
 
-@ app.post("/graphql")
-async def graphql_query(item: GraphQLItem):
+@ app.post("/graphql/query", tags=["Gen3"])
+async def graphql_query(item: GraphQLQueryItem):
     """
+    Return queries metadata records. The API uses GraphQL query language.
+
+    filter post format should looks like: 
+    {
+        "<filed_name>": [
+            "<attribute_name>", 
+            ...
+        ], 
+        ...
+    }
+
+    search post format should be <string_content>,
+    and search only available in manifest/case nodes
+    """
+    query_result = sgqlc.get_queried_result(item, SUBMISSION)
+    return query_result[item.node]
+
+
+def update_pagination_item(item, input):
+    if item.filter != {}:
+        query_item = GraphQLQueryItem()
+        filter_dict = {"submitter_id": []}
+        temp_node_dict = {}
+        for element in item.filter.values():
+            query_item.node, query_item.filter = element["node"], element["filter"]
+            filter_node = re.sub('_filter', '', query_item.node)
+            filter_field = list(query_item.filter.keys())[0]
+            # Only do fetch when there is no related temp data stored in temp_node_dict
+            # or the node field type is "String"
+            if filter_node not in temp_node_dict.keys() or filter_field not in FIELDS:
+                query_result = sgqlc.get_queried_result(query_item, SUBMISSION)
+                # The data will be stored when the field type is an "Array"
+                # The default filter relation of the Gen3 "Array" type field is "AND"
+                # We need "OR", therefore entire node data will go through a self-written filter function
+                if filter_field in FIELDS:
+                    temp_node_dict[filter_node] = query_result[filter_node]
+            elif filter_node in temp_node_dict.keys() and filter_field in FIELDS:
+                query_result = temp_node_dict
+            filter_dict["submitter_id"].append(f.get_filtered_datasets(
+                query_item.filter, query_result[filter_node]))
+        item.filter = filter_dict
+        f.filter_relation(item)
+
+    if input != "":
+        # If input does not match any content in the database, item.search will be empty dictionary
+        item.search["submitter_id"] = s.get_searched_datasets(input, SESSION)
+        if item.search != {} and ("submitter_id" not in item.filter or item.filter["submitter_id"] != []):
+            s.search_filter_relation(item)
+
+
+class GraphQLPaginationItem(BaseModel):
+    page: Union[int, None] = 1
+    limit: Union[int, None] = 50
+    node: Union[str, None] = None
+    filter: Union[dict, None] = {}
+    search: Union[dict, None] = {}
+    relation: Union[str, None] = "and"
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "page": 1,
+                "limit": 50,
+                "node": "experiment",
+                "filter": {},
+                "relation": "and"
+            }
+        }
+
+
+@ app.post("/graphql/pagination/", tags=["Gen3"])
+async def graphql_pagination(item: GraphQLPaginationItem, search: str = ""):
+    """
+    /graphql/pagination/?search=<string>
+
     Return filtered/searched metadata records. The API uses GraphQL query language.
 
-    Default limit = 50
     Default page = 1
+    Default limit = 50
+    Default search = ""
+    Default relation = "and"
 
-    filter post format should looks like: {"<filed_name>": ["<attribute_name>", ...], ...}
+    filter post format should looks like: 
+    {
+        "id": {
+            "node": "<gen3_node>", 
+            "filter": {
+                "<gen3_field>": [
+                    <filed_content>,
+                    ...
+                ]
+            }
+        }, 
+        ...
+    }
 
-    search post format should looks like: "\<string\>"
+    :param search: string content.
     """
-    if item.node == None or item.filter == None or item.search == None:
-        raise HTTPException(status_code=BAD_REQUEST,
-                            detail="Missing one ore more fields in request body.")
-
-    if item.node == "experiment":
-        merge_item_filter(item)
-    sgqlc = SimpleGraphQLClient()
-    query = sgqlc.generate_query(item)
-    # query_result = QUERY.graphql_query(query)
-    query_result = SUBMISSION.query(query)["data"]
-    if query_result is not None and query_result[item.node] != []:
-        pagination_result = {
-            "data": query_result[item.node],
-            # Maximum number of records display in one page
-            "limit": item.limit,
-            # The number of records display in current page
-            "size": len(query_result[item.node]),
-            "page": item.page,
-            "total": query_result["total"]
-        }
-        return pagination_result
-    else:
-        raise HTTPException(status_code=NOT_FOUND,
-                            detail="Data cannot be found in the node.")
-
-#
-# Gen3 Filter
-#
-filter_list = {
-    "manifest": ["DATA TYPES"],
-    "dataset_description": ["ANATOMICAL STRUCTURE", "SPECIES"],
-}
+    update_pagination_item(item, search)
+    query_result = sgqlc.get_queried_result(item, SUBMISSION)
+    if item.search != {}:
+        # Sort only if search is not empty, since search results are sorted by word relevance
+        query_result[item.node] = sorted(
+            query_result[item.node], key=lambda dict: item.filter["submitter_id"].index(dict["submitter_id"]))
+    return {
+        "data": query_result[item.node],
+        # Maximum number of records display in one page
+        "limit": item.limit,
+        "page": item.page,
+        "total": query_result["total"]
+    }
 
 
-@ app.post("/filters")
-async def generate_filters(item: Gen3Item):
+@ app.get("/filter", tags=["Gen3"])
+async def generate_filter():
     """
-    Return the support data for frontend filters.
+    Return the support data for frontend filters component.
     """
-    if item.program == None or item.project == None:
-        raise HTTPException(status_code=BAD_REQUEST,
-                            detail="Missing one ore more fields in request body.")
-
-    filters_result = {}
-    for node in filter_list:
-        for filter in filter_list[node]:
-            node_record = SUBMISSION.export_node(
-                item.program, item.project, node, "json")
-            if "message" in node_record:
-                if "unauthorized" in node_record["message"]:
-                    raise HTTPException(status_code=UNAUTHORIZED,
-                                        detail=node_record["message"])
-                raise HTTPException(status_code=NOT_FOUND,
-                                    detail=node_record["message"])
-            elif node_record["data"] == []:
-                raise HTTPException(status_code=NOT_FOUND,
-                                    detail=f"No data found with node type {node} and check if the correct project or node type is used")
-            else:
-                f = Filter()
-                filters_result[filter] = f.get_filter_data(
-                    filter, node_record)
-    return filters_result
+    return f.generate_filter_information()
 
 
-@ app.get("/metadata/download/{program}/{project}/{uuid}/{format}")
-async def download_gen3_metadata_file(program: str, project: str, uuid: str, format: str):
+class Project(str, Enum):
+    project = "12L"
+
+
+class Format(str, Enum):
+    json = "json"
+    tsv = "tsv"
+
+
+@ app.get("/metadata/download/{program}/{project}/{uuid}/{format}", tags=["Gen3"])
+async def download_gen3_metadata_file(program: Program, project: Project, uuid: str, format: Format):
     """
     Return a single file for a given uuid.
 
@@ -415,7 +445,7 @@ async def download_gen3_metadata_file(program: str, project: str, uuid: str, for
             raise HTTPException(status_code=UNAUTHORIZED,
                                 detail=metadata["message"])
         raise HTTPException(
-            status_code=NOT_FOUND, detail=metadata["message"]+" and check if uses the correct project or uuid is used")
+            status_code=NOT_FOUND, detail=metadata["message"]+" and check if the correct project or uuid is used")
     else:
         if format == "json":
             return JSONResponse(content=metadata[0],
@@ -434,9 +464,29 @@ async def download_gen3_metadata_file(program: str, project: str, uuid: str, for
 #
 
 
-class action(str, Enum):
-    preview = "preview"
-    download = "download"
+def get_collection_list(data):
+    collect_list = []
+    for ele in data:
+        collect_list.append({
+            "name": ele.name,
+            "path": ele.path
+        })
+    return collect_list
+
+
+@ app.get("/collection/root", tags=["iRODS"])
+async def get_irods_root_collections():
+    """
+    Return all collections from the root folder.
+    """
+    try:
+        collect = SESSION.collections.get(
+            f"{iRODSConfig.IRODS_ENDPOINT_URL}")
+        folders = get_collection_list(collect.subcollections)
+        files = get_collection_list(collect.data_objects)
+    except Exception as e:
+        raise HTTPException(status_code=INTERNAL_SERVER_ERROR, detail=str(e))
+    return {"folders": folders, "files": files}
 
 
 class CollectionItem(BaseModel):
@@ -450,52 +500,32 @@ class CollectionItem(BaseModel):
         }
 
 
-def get_collection_list(data):
-    collect_list = []
-    for ele in data:
-        collect_list.append({
-            "id": ele.id,
-            "name": ele.name,
-            "path": ele.path
-        })
-    return collect_list
-
-
-@ app.get("/collection")
-async def get_irods_root_collections():
-    """
-    Return all collections from the root folder.
-    """
-    try:
-        collect = SESSION.collections.get(
-            f"{iRODSConfig.IRODS_ENDPOINT_URL}")
-        folders = get_collection_list(collect.subcollections)
-        files = get_collection_list(collect.data_objects)
-    except Exception as e:
-        raise HTTPException(status_code=NOT_FOUND, detail=str(e))
-    return {"folders": folders, "files": files}
-
-
-@ app.post("/collection")
+@ app.post("/collection", tags=["iRODS"])
 async def get_irods_collections(item: CollectionItem):
     """
     Return all collections from the required folder.
     """
     if item.path == None:
         raise HTTPException(status_code=BAD_REQUEST,
-                            detail="Missing field in request body.")
+                            detail="Missing field in the request body")
 
     try:
         collect = SESSION.collections.get(item.path)
         folders = get_collection_list(collect.subcollections)
         files = get_collection_list(collect.data_objects)
         return {"folders": folders, "files": files}
-    except Exception as e:
-        raise HTTPException(status_code=NOT_FOUND, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=NOT_FOUND,
+                            detail="Data not found in the provided path")
 
 
-@ app.get("/data/{action}/{filepath:path}")
-async def get_irods_data_file(action: action, filepath: str):
+class Action(str, Enum):
+    preview = "preview"
+    download = "download"
+
+
+@ app.get("/data/{action}/{filepath:path}", tags=["iRODS"])
+async def get_irods_data_file(action: Action, filepath: str):
     """
     Used to preview most types of data files in iRODS (.xlsx and .csv not supported yet).
     OR
@@ -509,23 +539,24 @@ async def get_irods_data_file(action: action, filepath: str):
     try:
         file = SESSION.data_objects.get(
             f"{iRODSConfig.IRODS_ENDPOINT_URL}/{filepath}")
+    except Exception:
+        raise HTTPException(status_code=NOT_FOUND,
+                            detail="Data not found in the provided path")
 
-        def iterate_file():
-            with file.open("r") as file_like:
+    def iterate_file():
+        with file.open("r") as file_like:
+            chunk = file_like.read(chunk_size)
+            while chunk:
+                yield chunk
                 chunk = file_like.read(chunk_size)
-                while chunk:
-                    yield chunk
-                    chunk = file_like.read(chunk_size)
-        if action == "preview":
-            return StreamingResponse(iterate_file(),
-                                     media_type=mimetypes.guess_type(file.name)[0])
-        elif action == "download":
-            return StreamingResponse(iterate_file(),
-                                     media_type=mimetypes.guess_type(file.name)[
-                0],
-                headers={"Content-Disposition": f"attachment;filename={file.name}"})
-        else:
-            raise HTTPException(status_code=NOT_FOUND,
-                                detail="The action is not provided in this API.")
-    except Exception as e:
-        raise HTTPException(status_code=NOT_FOUND, detail=str(e))
+    if action == "preview":
+        return StreamingResponse(iterate_file(),
+                                 media_type=mimetypes.guess_type(file.name)[0])
+    elif action == "download":
+        return StreamingResponse(iterate_file(),
+                                 media_type=mimetypes.guess_type(file.name)[
+            0],
+            headers={"Content-Disposition": f"attachment;filename={file.name}"})
+    else:
+        raise HTTPException(status_code=METHOD_NOT_ALLOWED,
+                            detail="The action is not provided in this API")
