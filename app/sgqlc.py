@@ -2,15 +2,9 @@ import re
 
 from fastapi import HTTPException
 
+from app.data_schema import *
 from sgqlc.operation import Operation
 from app.sgqlc_schema import Query
-
-
-BAD_REQUEST = 400
-UNAUTHORIZED = 401
-NOT_FOUND = 404
-METHOD_NOT_ALLOWED = 405
-INTERNAL_SERVER_ERROR = 500
 
 
 class SimpleGraphQLClient:
@@ -20,29 +14,38 @@ class SimpleGraphQLClient:
         if item.filter != {}:
             # Manually modify and add count filed into graphql query
             filter_argument = re.sub(
-                '\'([_a-z]+)\'', r'\1', re.sub('\{([^{].*[^}])\}', r'\1', f'{item.filter}'))
+                '\'([_a-z]+)\'', r'\1', re.sub(r'\{([^{].*[^}])\}', r'\1', f'{item.filter}'))
             count_field = re.sub(
                 '\'', '\"', f'total: _{item.node}_count({filter_argument})')
         return query + count_field
+
+    def update_manifests_information(self, query):
+        query = re.sub(
+            'manifests1', 'scaffolds: manifests(additional_types: ["application/x.vnd.abi.scaffold.meta+json", "inode/vnd.abi.scaffold+file"])', query)
+        query = re.sub(
+            'manifests2', 'scaffoldViews: manifests(additional_types: ["application/x.vnd.abi.scaffold.view+json"])', query)
+        query = re.sub(
+            'manifests3', 'plots: manifests(additional_types: ["text/vnd.abi.plot+tab-separated-values", "text/vnd.abi.plot+Tab-separated-values", "text/vnd.abi.plot+csv"])', query)
+        query = re.sub(
+            'manifests4', 'thumbnails: manifests(file_type: [".jpg", ".png"])', query)
+        return query
 
     def convert_query(self, item, query):
         # Convert camel case to snake case
         snake_case_query = re.sub(
             '_[A-Z]', lambda x:  x.group(0).lower(), re.sub('([a-z])([A-Z])', r'\1_\2', str(query)))
-        # Remove all null filter arguments, this can minimize the generate_query function if statement length
+        # Remove all null filter arguments, this can simplify the generate_query function
         if "null" in snake_case_query:
             snake_case_query = re.sub(
                 '[,]? [_a-z]+: null', '', snake_case_query)
         # Update the filter query node name
-        if "filter" in item.node:
+        if "filter" in item.node:  # query situation
             snake_case_query = re.sub('_filter', '', snake_case_query)
             item.node = re.sub('_filter', '', item.node)
-        # Only pagination graphql will need to add count field
-        if type(item.search) == dict:
-            # Only fetch the thumbnail manifest file
-            if "manifests" in snake_case_query:
-                snake_case_query = re.sub(
-                    'manifests', 'manifests(additional_types: ["image/x.vnd.abi.thumbnail+jpeg", "image/x.vnd.abi.thumbnail+png"])', snake_case_query)
+        if type(item.search) == dict:  # pagination situation
+            snake_case_query = self.update_manifests_information(
+                snake_case_query)
+            # Only pagination will need to add count field
             snake_case_query = self.add_count_field(item, snake_case_query)
         return "{" + snake_case_query + "}"
 
@@ -85,7 +88,8 @@ class SimpleGraphQLClient:
                     first=item.limit,
                     offset=(item.page-1)*item.limit,
                     quick_search=item.search,
-                    additional_types=item.filter["additional_types"] if "additional_types" in item.filter else None
+                    additional_types=item.filter["additional_types"] if "additional_types" in item.filter else None,
+                    file_type=item.filter["file_type"] if "file_type" in item.filter else None
                 )
             )
         elif item.node == "manifest_filter":

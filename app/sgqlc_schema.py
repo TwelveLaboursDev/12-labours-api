@@ -2,49 +2,63 @@ from sgqlc.types.relay import Node
 from sgqlc.types import String, Int, Type, Field, list_of
 
 
+# SUB NODE ONLY
+class SubExperimentNode(Node):
+    submitter_id = String
+
+
+class SubDatasetDescriptionNode(Node):
+    title = String
+    study_organ_system = list_of(String)
+    number_of_subjects = Int
+    number_of_samples = Int
+    keywords = list_of(String)
+    contributor_name = list_of(String)
+
+
+class SubManifestNode(Node):
+    filename = String
+    file_type = String
+    additional_types = String
+    is_derived_from = list_of(String)
+    is_described_by = list_of(String)
+    is_source_of = list_of(String)
+    supplemental_json_metadata = String
+
+
+class SubCaseNode(Node):
+    species = String
+
+
 # FILTER USE ONLY
 # Minimize the query fields
 # Increase the generating speed
 class DatasetDescriptionFilter(Node):
-    submitter_id = String
+    experiments = list_of(SubExperimentNode)
     keywords = list_of(String)
     study_organ_system = list_of(String)
 
 
 class ManifestFilter(Node):
-    submitter_id = String
+    experiments = list_of(SubExperimentNode)
     additional_types = list_of(String)
 
 
 class CaseFilter(Node):
-    submitter_id = String
+    experiments = list_of(SubExperimentNode)
     species = String
     sex = String
     age_category = String
 
 
-# QUERY USE ONLY
-class SubCaseNode(Node):
-    species = String
-
-
-class SubManifestNode(Node):
-    filename = String
-
-
-class SubDatasetDescriptionNode(Node):
-    title = String
-    subtitle = String
-    study_organ_system = list_of(String)
-    number_of_subjects = Int
-    number_of_samples = Int
-    keywords = list_of(String)
-
-
+# QUERY/PAGINATION USE ONLY
 class ExperimentNode(Node):
     submitter_id = String
     dataset_descriptions = list_of(SubDatasetDescriptionNode)
-    manifests = list_of(SubManifestNode)
+    manifests1 = list_of(SubManifestNode)
+    manifests2 = list_of(SubManifestNode)
+    manifests3 = list_of(SubManifestNode)
+    manifests4 = list_of(SubManifestNode)
     cases = list_of(SubCaseNode)
 
 
@@ -153,7 +167,8 @@ class Query(Type):
             "first": Int,
             "offset": Int,
             "quick_search": String,
-            "additional_types": list_of(String)
+            "additional_types": list_of(String),
+            "file_type": list_of(String)
         }
     )
     manifestFilter = Field(
