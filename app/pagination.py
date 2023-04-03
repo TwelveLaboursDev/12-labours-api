@@ -101,74 +101,74 @@ class Pagination:
                 result.append(ele)
         return result
 
+    def handle_multiple_cite(self, filename, cite):
+        full_path = ""
+        result = {
+            "path": [],
+            "relative": {
+                "path": []
+            }
+        }
+        data = json.loads(re.sub("'", '"', cite))
+        for ele in data:
+            full_path_list = filename.split("/")
+            full_path_list[-1] = ele.split("/")[-1]
+            full_path = "/".join(full_path_list)
+            result["path"].append(full_path)
+            result["relative"]["path"].append(ele.split("/")[-1])
+        return result
+
+    # filename: (contains full file path), cite: isDerivedFrom/isDescribedBy/isSourceOf
+    def handle_cite_path(self, filename, cite):
+        full_path = ""
+        result = {
+            "path": [],
+            "relative": {
+                "path": []
+            }
+        }
+        if cite != "":
+            if len(cite.split(",")) > 1:
+                result = self.handle_multiple_cite(filename, cite)
+                return result
+            full_path_list = filename.split("/")
+            full_path_list[-1] = cite.split("/")[-1]
+            full_path = "/".join(full_path_list)
+        result["path"].append(full_path)
+        result["relative"]["path"].append(cite.split("/")[-1])
+        return result
+
+    def handle_image_url(self, prefix, filename, source_of, has_image):
+        full_url = prefix
+        if has_image:
+            if source_of != "":
+                path_list = filename.split("/")
+                path_list[-1] = source_of.split("/")[-1]
+                filepath = "/".join(path_list)
+                full_url += filepath
+            else:
+                full_url += filename
+        else:
+            return ""
+        return full_url
+
     def handle_empty_value(self, data):
         if data == None or data == "NA":
             return ""
         return data
 
-    def handle_multiple_cite(self, filename, cite):
-        full_path = ""
-        path_object = {
-            "path": [],
-            "relative": {
-                "path": []
-            }
-        }
-        for ele in json.loads(re.sub("'", '"', cite)):
-            full_path_list = filename.split("/")
-            full_path_list[-1] = ele.split("/")[-1]
-            full_path = "/".join(full_path_list)
-            path_object["path"].append(full_path)
-            path_object["relative"]["path"].append(ele.split("/")[-1])
-        return path_object
-
-    # filename: (contains full file path), data: isDerivedFrom/isDescribedBy/isSourceOf
-    def handle_path(self, filename, data):
-        full_path = ""
-        path_object = {
-            "path": [],
-            "relative": {
-                "path": []
-            }
-        }
-        if data != "":
-            if len(data.split(",")) > 1:
-                path_object = self.handle_multiple_cite(filename, data)
-                return path_object
-            full_path_list = filename.split("/")
-            full_path_list[-1] = data.split("/")[-1]
-            full_path = "/".join(full_path_list)
-        path_object["path"].append(full_path)
-        path_object["relative"]["path"].append(data.split("/")[-1])
-        return path_object
-
-    def handle_image_url(self, filetype, datasetId, filename, source_of):
-        full_url = f"{Config.BASE_URL}/data/preview/{datasetId}"
-        if filetype == "scaffoldViews" or filetype == "thumbnails":
-            if source_of != "":
-                path_list = filename.split("/")
-                path_list[-1] = source_of.split("/")[-1]
-                filepath = "/".join(path_list)
-                full_url += f"/{filepath}"
-            else:
-                full_url += f"/{filename}"
-        else:
-            full_url = ""
-        return full_url
-
-    def update_manifests_based(self, filetype, uuid, datasetId, data):
-        items = []
+    def update_manifests_based(self, uuid, prefix, data, image=False):
+        result = []
         for ele in data:
             item = {
-                "image_url": self.handle_image_url(filetype, datasetId, ele["filename"], self.handle_empty_value(ele["is_source_of"])),
-                "source_url_prefix": f"{Config.BASE_URL}/data/download/{datasetId}/",
+                "image_url": self.handle_image_url(prefix, ele["filename"], self.handle_empty_value(ele["is_source_of"]), image),
                 "additional_mimetype": {
                     "name": self.handle_empty_value(ele["additional_types"])
                 },
                 "datacite": {
-                    "isDerivedFrom": self.handle_path(ele["filename"], self.handle_empty_value(ele["is_derived_from"])),
-                    "isDescribedBy": self.handle_path(ele["filename"], self.handle_empty_value(ele["is_described_by"])),
-                    "isSourceOf": self.handle_path(ele["filename"], self.handle_empty_value(ele["is_source_of"])),
+                    "isDerivedFrom": self.handle_cite_path(ele["filename"], self.handle_empty_value(ele["is_derived_from"])),
+                    "isDescribedBy": self.handle_cite_path(ele["filename"], self.handle_empty_value(ele["is_described_by"])),
+                    "isSourceOf": self.handle_cite_path(ele["filename"], self.handle_empty_value(ele["is_source_of"])),
                     "supplemental_json_metadata": {
                         "description": self.handle_empty_value(ele["supplemental_json_metadata"])
                     },
@@ -183,27 +183,30 @@ class Pagination:
                 "identifier": ele["id"],
                 "name": ele["filename"].split("/")[-1],
             }
-            items.append(item)
-        return items
+            result.append(item)
+        return result
 
-    def update_pagination_output(self, result):
-        items = []
-        for ele in result:
+    def update_pagination_output(self, data):
+        result = []
+        for ele in data:
+            dataset_id = ele["submitter_id"]
+            image_url_prefix = f"{Config.BASE_URL}/data/preview/{dataset_id}/"
             item = {
-                "data_url": f"{Config.PORTAL_URL}/data/browser/dataset/" + ele["submitter_id"] + "?datasetTab=abstract",
+                "data_url": f"{Config.PORTAL_URL}/data/browser/dataset/{dataset_id}?datasetTab=abstract",
+                "source_url_prefix": f"{Config.BASE_URL}/data/download/{dataset_id}/",
                 "contributors": self.update_contributors(ele["dataset_descriptions"][0]["contributor_name"]),
                 "keywords": ele["dataset_descriptions"][0]["keywords"],
                 "numberSamples": int(ele["dataset_descriptions"][0]["number_of_samples"][0]),
                 "numberSubjects": int(ele["dataset_descriptions"][0]["number_of_subjects"][0]),
                 "name": ele["dataset_descriptions"][0]["title"][0],
-                "datasetId": ele["submitter_id"],
+                "datasetId": dataset_id,
                 "organs": ele["dataset_descriptions"][0]["study_organ_system"],
                 "species": self.update_species(ele["cases"]),
-                "plots": self.update_manifests_based("plots", ele["id"], ele["submitter_id"], ele["plots"]),
-                "scaffoldViews": self.update_manifests_based("scaffoldViews", ele["id"], ele["submitter_id"], ele["scaffoldViews"]),
-                "scaffolds": self.update_manifests_based("scaffolds", ele["id"], ele["submitter_id"], ele["scaffolds"]),
-                "thumbnails": self.update_manifests_based("thumbnails", ele["id"], ele["submitter_id"], self.update_thumbnails(ele["thumbnails"])),
+                "plots": self.update_manifests_based(ele["id"], image_url_prefix, ele["plots"]),
+                "scaffoldViews": self.update_manifests_based(ele["id"], image_url_prefix, ele["scaffoldViews"], True),
+                "scaffolds": self.update_manifests_based(ele["id"], image_url_prefix, ele["scaffolds"]),
+                "thumbnails": self.update_manifests_based(ele["id"], image_url_prefix, self.update_thumbnails(ele["thumbnails"]), True),
                 "detailsReady": True,
             }
-            items.append(item)
-        return items
+            result.append(item)
+        return result
