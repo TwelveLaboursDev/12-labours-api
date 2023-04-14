@@ -1,7 +1,9 @@
 import mimetypes
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, StreamingResponse, JSONResponse, Response
+from fastapi_utils.tasks import repeat_every
 from gen3.auth import Gen3Auth
 from gen3.submission import Gen3Submission
 from irods.session import iRODSSession
@@ -11,6 +13,7 @@ from app.data_schema import *
 from app.sgqlc import SimpleGraphQLClient
 from app.filter import Filter
 from app.pagination import Pagination
+from app.filter_dictionary import FilterGenerator
 
 description = """
 ## Gen3
@@ -83,10 +86,10 @@ app.add_middleware(
 
 SUBMISSION = None
 SESSION = None
-
 sgqlc = SimpleGraphQLClient()
 f = Filter()
 p = Pagination()
+fg = FilterGenerator()
 
 
 @ app.on_event("startup")
@@ -116,6 +119,12 @@ async def start_up():
         print("Encounter an error while creating the iRODS session.")
 
 
+@ app.on_event("startup")
+@repeat_every(seconds=60*60*24)
+def periodic_execution():
+    fg.generate_filter_dictionary(SUBMISSION)
+
+
 @ app.get("/", tags=["Root"], response_class=PlainTextResponse)
 async def root():
     return "This is the fastapi backend."
@@ -134,7 +143,7 @@ def get_name_list(data, name, path):
     return name_dict
 
 
-@ app.get("/program", tags=["Gen3"], summary="Get gen3 program information", response_description="Gen3 program name")
+@ app.get("/program", tags=["Gen3"], summary="Get gen3 program information", responses=program_responses)
 async def get_gen3_program():
     """
     Return all programs information from the Gen3 Data Commons.
@@ -146,7 +155,7 @@ async def get_gen3_program():
         raise HTTPException(status_code=NOT_FOUND, detail=str(e))
 
 
-@ app.get("/project/{program}", tags=["Gen3"], summary="Get gen3 project information", response_description="Gen3 project name")
+@ app.get("/project/{program}", tags=["Gen3"], summary="Get gen3 project information", responses=project_responses)
 async def get_gen3_project(program: ProgramParam):
     """
     Return all projects information from a gen3 program.
@@ -160,7 +169,7 @@ async def get_gen3_project(program: ProgramParam):
         raise HTTPException(status_code=NOT_FOUND, detail=str(e))
 
 
-@ app.post("/dictionary", tags=["Gen3"], summary="Get gen3 dictionary information", response_description="Gen3 dictionary name")
+@ app.post("/dictionary", tags=["Gen3"], summary="Get gen3 dictionary information", responses=dictionary_responses)
 async def get_gen3_dictionary(item: Gen3Item):
     """
     Return all dictionary nodes from the Gen3 Data Commons
@@ -178,7 +187,7 @@ async def get_gen3_dictionary(item: Gen3Item):
             status_code=NOT_FOUND, detail=f"Program {item.program} or project {item.project} not found")
 
 
-@ app.post("/records/{node}", tags=["Gen3"], summary="Get gen3 node records information", response_description="A list of json object contains all records metadata within a node")
+@ app.post("/records/{node}", tags=["Gen3"], summary="Get gen3 node records information", responses=records_responses)
 async def get_gen3_node_records(node: NodeParam, item: Gen3Item):
     """
     Return all records information in a dictionary node.
@@ -204,7 +213,7 @@ async def get_gen3_node_records(node: NodeParam, item: Gen3Item):
         return node_record
 
 
-@ app.post("/record/{uuid}", tags=["Gen3"], summary="Get gen3 record information", response_description="A json object contains gen3 record metadata")
+@ app.post("/record/{uuid}", tags=["Gen3"], summary="Get gen3 record information", responses=record_responses)
 async def get_gen3_record(uuid: str, item: Gen3Item):
     """
     Return record information in the Gen3 Data Commons.
@@ -227,7 +236,7 @@ async def get_gen3_record(uuid: str, item: Gen3Item):
         return record
 
 
-@ app.post("/graphql/query", tags=["Gen3"], summary="GraphQL query gen3 information")
+@ app.post("/graphql/query", tags=["Gen3"], summary="GraphQL query gen3 information", responses=query_responses)
 async def graphql_query(item: GraphQLQueryItem):
     """
     Return queries metadata records. The API uses GraphQL query language.
@@ -248,7 +257,7 @@ async def graphql_query(item: GraphQLQueryItem):
     return query_result[item.node]
 
 
-@ app.post("/graphql/pagination/", tags=["Gen3"], summary="Display datasets", response_description="A list of datasets")
+@ app.post("/graphql/pagination/", tags=["Gen3"], summary="Display datasets", responses=pagination_responses)
 async def graphql_pagination(item: GraphQLPaginationItem, search: str = ""):
     """
     /graphql/pagination/?search=<string>
@@ -285,7 +294,7 @@ async def graphql_pagination(item: GraphQLPaginationItem, search: str = ""):
     }
 
 
-@ app.get("/filter/", tags=["Gen3"], summary="Get filter information")
+@ app.get("/filter/", tags=["Gen3"], summary="Get filter information", responses=filter_responses)
 async def generate_filter(sidebar: bool):
     """
     /filter/?sidebar=<boolean>
@@ -349,7 +358,7 @@ def get_collection_list(data):
     return collect_list
 
 
-@ app.get("/collection/root", tags=["iRODS"], summary="Get root information", response_description="All folders/files name and path under root folder")
+@ app.get("/collection/root", tags=["iRODS"], summary="Get root information", responses=root_responses)
 async def get_irods_root_collections():
     """
     Return all collections from the root folder.
@@ -364,7 +373,7 @@ async def get_irods_root_collections():
     return {"folders": folders, "files": files}
 
 
-@ app.post("/collection", tags=["iRODS"], summary="Get folder information", response_description="All folders/files name and path under selected folder")
+@ app.post("/collection", tags=["iRODS"], summary="Get folder information", responses=sub_responses)
 async def get_irods_collections(item: CollectionItem):
     """
     Return all collections from the required folder.
