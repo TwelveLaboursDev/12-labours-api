@@ -242,12 +242,13 @@ async def graphql_query(item: GraphQLQueryItem):
     Return queries metadata records. The API uses GraphQL query language.
 
     **node**
+    - experiment_query
     - dataset_description_query
     - manifest_query
     - case_query
 
     **filter**
-    - {"submitter_id": ["<submitter_id>", ...], ...}
+    - {"field_name": ["<field_value>", ...], ...}
 
     **search**
     - string content,
@@ -285,13 +286,13 @@ async def graphql_pagination(item: GraphQLPaginationItem, search: str = ""):
         # Sort only if search is not empty, since search results are sorted by word relevance
         query_result[item.node] = sorted(
             query_result[item.node], key=lambda dict: item.filter["submitter_id"].index(dict["submitter_id"]))
-    return {
+    result = {
         "items": p.update_pagination_output(query_result[item.node]),
-        # Maximum number of records display in one page
         "numberPerPage": item.limit,
         "page": item.page,
         "total": query_result["total"]
     }
+    return result
 
 
 @ app.get("/filter/", tags=["Gen3"], summary="Get filter information", responses=filter_responses)
