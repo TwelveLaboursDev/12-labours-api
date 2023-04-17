@@ -8,40 +8,19 @@ FILTERS = {
         "title": "Age Category",
         "node": "case_filter",
         "field": "age_category",
-        "element": {
-            # "Adolescent": "Adolescent",
-            # "Adult": "prime adult stage",
-            # "Juvenile": "Juvenile",
-        }
+        "element": {}
     },
     "MAPPED_ANATOMICAL_STRUCTURE": {
         "title": "Anatomical Structure",
         "node": "dataset_description_filter",
         "field": "study_organ_system",
-        "element": {
-            # "Body Proper": "body proper",
-            # "Brainstem": "brainstem",
-            # "Breast": "breast",
-            # "Cardiac Nerve Plexus": "cardiac nerve plexus",
-            # "Colon": "colon",
-            # "Diaphragm": "diaphragm",
-            # "Heart": "heart",
-            # "Lung": "lung",
-            # "Skin Epidermis": "skin epidermis",
-            # "Spinal Cord": "spinal cord",
-            # "Stomach": "stomach",
-            # "Urinary Bladder": "urinary bladder",
-            # "Vagus Nerve": "vagus nerve",
-        }
+        "element": {}
     },
     "MAPPED_SEX": {
         "title": "Sex",
         "node": "case_filter",
         "field": "sex",
-        "element": {
-            # "Female": "Female",
-            # "Male": "Male",
-        }
+        "element": {}
     },
     "MAPPED_MIME_TYPE": {
         "title": "Mime Type",
@@ -69,11 +48,11 @@ FILTERS = {
         "node": "case_filter",
         "field": "species",
         "element": {
-            # "Cat": "Felis catus",
-            # "Human": "Homo sapiens",
-            # "Mouse": "Mus musculus",
-            # "Pig": "Sus scrofa",
-            # "Rat": "Rattus norvegicus",
+            "Cat": "Felis catus",
+            "Human": "Homo sapiens",
+            "Mouse": "Mus musculus",
+            "Pig": "Sus scrofa",
+            "Rat": "Rattus norvegicus",
         }
     }
 }
@@ -102,3 +81,4 @@ class FilterGenerator:
                             filter_element[name] = value
                 FILTERS[element]["element"] = dict(
                     sorted(filter_element.items()))
+        return True
