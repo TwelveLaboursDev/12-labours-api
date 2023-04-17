@@ -1,3 +1,4 @@
+import time
 import mimetypes
 
 from fastapi import FastAPI, HTTPException
@@ -67,7 +68,7 @@ app = FastAPI(
     #     "name": "",
     #     "url": "",
     # }
-    openapi_tags=tags_metadata
+    openapi_tags=tags_metadata,
 )
 
 # Cross orgins, allow any for now
@@ -86,6 +87,7 @@ app.add_middleware(
 
 SUBMISSION = None
 SESSION = None
+FILTER_GENERATED = False
 sgqlc = SimpleGraphQLClient()
 f = Filter()
 p = Pagination()
@@ -122,7 +124,8 @@ async def start_up():
 @ app.on_event("startup")
 @repeat_every(seconds=60*60*24)
 def periodic_execution():
-    fg.generate_filter_dictionary(SUBMISSION)
+    global FILTER_GENERATED
+    FILTER_GENERATED = fg.generate_filter_dictionary(SUBMISSION)
 
 
 @ app.get("/", tags=["Root"], response_class=PlainTextResponse)
@@ -242,12 +245,13 @@ async def graphql_query(item: GraphQLQueryItem):
     Return queries metadata records. The API uses GraphQL query language.
 
     **node**
+    - experiment_query
     - dataset_description_query
     - manifest_query
     - case_query
 
     **filter**
-    - {"submitter_id": ["<submitter_id>", ...], ...}
+    - {"field_name": ["<field_value>", ...], ...}
 
     **search**
     - string content,
@@ -285,13 +289,13 @@ async def graphql_pagination(item: GraphQLPaginationItem, search: str = ""):
         # Sort only if search is not empty, since search results are sorted by word relevance
         query_result[item.node] = sorted(
             query_result[item.node], key=lambda dict: item.filter["submitter_id"].index(dict["submitter_id"]))
-    return {
+    result = {
         "items": p.update_pagination_output(query_result[item.node]),
-        # Maximum number of records display in one page
         "numberPerPage": item.limit,
         "page": item.page,
         "total": query_result["total"]
     }
+    return result
 
 
 @ app.get("/filter/", tags=["Gen3"], summary="Get filter information", responses=filter_responses)
@@ -303,12 +307,14 @@ async def generate_filter(sidebar: bool):
 
     - **sidebar**: boolean content.
     """
+    while not FILTER_GENERATED:
+        time.sleep(1)
     if sidebar == True:
         return f.generate_sidebar_filter_information()
     return f.generate_filter_information()
 
 
-@ app.get("/metadata/download/{program}/{project}/{uuid}/{format}", tags=["Gen3"], summary="Download gen3 record information", response_description="A JSON or CSV file contains the metadata")
+@ app.get("/metadata/download/{program}/{project}/{uuid}/{format}", tags=["Gen3"], summary="Download gen3 record information", response_description="Successfully return a JSON or CSV file contains the metadata")
 async def download_gen3_metadata_file(program: ProgramParam, project: ProjectParam, uuid: str, format: FormatParam):
     """
     Return a single metadata file for a given uuid.
@@ -392,7 +398,7 @@ async def get_irods_collections(item: CollectionItem):
                             detail="Data not found in the provided path")
 
 
-@ app.get("/data/{action}/{filepath:path}", tags=["iRODS"], summary="Download irods file", response_description="A file with data")
+@ app.get("/data/{action}/{filepath:path}", tags=["iRODS"], summary="Download irods file", response_description="Successfully return a file with data")
 async def get_irods_data_file(action: ActionParam, filepath: str):
     """
     Used to preview most types of data files in iRODS (.xlsx and .csv not supported yet).

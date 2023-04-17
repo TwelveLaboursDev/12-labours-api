@@ -30,6 +30,8 @@ IRODS_PASSWORD =
 IRODS_PORT =
 IRODS_USER =
 IRODS_ZONE =
+BASE_URL =
+PORTAL_URL =
 ```
 
 ## Running the app
@@ -97,10 +99,10 @@ If you do not have the 12 Labours portal user environment variables setup alread
 After the previous steps or if you already have those environment variables setup, run:
 
 ```bash
-# Set the python path to the current diectory
-$ export PYTHONPATH=.
 # Install all required dependencies
 $ pip install -r requirements-dev.txt
+# Set the python path to the current diectory
+$ export PYTHONPATH=.
 # Run the pytest
 $ pytest
 ```

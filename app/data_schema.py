@@ -11,23 +11,10 @@ METHOD_NOT_ALLOWED = 405
 INTERNAL_SERVER_ERROR = 500
 
 
-responses = {
-    422: {"description": "Unprocessable Entity"},
-}
-
-
 program_responses = {
     200: {
-        "description": "Gen3 program name",
-        "content": {
-            "application/json": {
-                "example": {
-                    "program": [
-                        ""
-                    ]
-                }
-            }
-        }
+        "description": "Successfully return a list of Gen3 program name",
+        "content": {"application/json": {"example": {"program": []}}}
     }
 }
 
@@ -37,18 +24,9 @@ class ProgramParam(str, Enum):
 
 
 project_responses = {
-    **responses,
     200: {
-        "description": "Gen3 project name",
-        "content": {
-            "application/json": {
-                "example": {
-                    "project": [
-                        ""
-                    ]
-                }
-            }
-        }
+        "description": "Successfully return a list of Gen3 project name",
+        "content": {"application/json": {"example": {"project": []}}}
     }
 }
 
@@ -67,18 +45,9 @@ class Gen3Item(BaseModel):
 
 
 dictionary_responses = {
-    **responses,
     200: {
-        "description": "Gen3 dictionary name list",
-        "content": {
-            "application/json": {
-                "example": {
-                    "dictionary": [
-                        ""
-                    ]
-                }
-            }
-        }
+        "description": "Successfully return a list of Gen3 dictionary name",
+        "content": {"application/json": {"example": {"dictionary": []}}}
     }
 }
 
@@ -91,78 +60,27 @@ class NodeParam(str, Enum):
 
 
 records_responses = {
-    **responses,
     200: {
-        "description": "A list of json object contains all records metadata within a node",
-        "content": {
-            "application/json": {
-                "example": {
-                    "data": [
-                        {
-                            "project_id": "",
-                            "submitter_id": "",
-                            "projects": [
-                                {
-                                    "node_id": "",
-                                    "code": ""
-                                }
-                            ],
-                            "id": "",
-                            "type": "experiment"
-                        }
-                    ]
-                }
-            }
-        }
+        "description": "Successfully return a list of json object contains all records metadata within a node",
+        "content": {"application/json": {"example": {
+            "data": [{"project_id": "", "submitter_id": "", "id": "", "type": "experiment"}]
+        }}}
     }
 }
 
 
 record_responses = {
-    **responses,
     200: {
-        "description": "A json object contains gen3 record metadata",
-        "content": {
-            "application/json": {
-                "example": [
-                    {
-                        "id": "",
-                        "projects": [
-                                {
-                                    "node_id": "",
-                                    "code": ""
-                                }
-                        ],
-                        "type": "experiment",
-                        "project_id": "",
-                        "submitter_id": "",
-                        "associated_experiment": "",
-                        "copy_numbers_identified": "",
-                        "data_description": "",
-                        "experimental_description": "",
-                        "experimental_intent": "",
-                        "indels_identified": "",
-                        "marker_panel_description": "",
-                        "number_experimental_group": "",
-                        "number_samples_per_experimental_group": "",
-                        "somatic_mutations_identified": "",
-                        "type_of_data": "",
-                        "type_of_sample": "",
-                        "type_of_specimen": ""
-                    }
-                ]
-            }
-        }
+        "description": "Successfully return a json object contains gen3 record metadata",
+        "content": {"application/json": {"example": [{
+            "id": "", "type": "experiment", "project_id": "", "submitter_id": "",
+            "associated_experiment": "", "copy_numbers_identified": "", "data_description": "", "experimental_description": "",
+            "experimental_intent": "", "indels_identified": "", "marker_panel_description": "", "number_experimental_group": "",
+            "number_samples_per_experimental_group": "", "somatic_mutations_identified": "", "type_of_data": "", "type_of_sample": "",
+            "type_of_specimen": ""
+        }]}}
     },
-    404: {
-        "content": {
-            "application/json": {
-                "example": {
-                    "detail": "Unable to find xxx and check if the correct project or uuid is used"
-                }
-            }
-        }
-    }
+    404: {"content": {"application/json": {"example": {"detail": "Unable to find xxx and check if the correct project or uuid is used"}}}}
 }
 
 
@@ -175,34 +93,18 @@ class GraphQLQueryItem(BaseModel):
         schema_extra = {
             "example": {
                 "node": "experiment_query",
-                "filter": {
-                    "submitter_id": [
-                        "dataset-102-version-4"
-                    ]
-                },
+                "filter": {"submitter_id": ["dataset-102-version-4"]},
                 "search": "",
             }
         }
 
 
 query_responses = {
-    **responses,
     200: {
-        "description": "A list of queried datasets",
-        "content": {
-            "application/json": {
-                "example": {
-                    "cases": [],
-                    "dataset_descriptions": [],
-                    "id": "",
-                    "plots": [],
-                    "scaffoldViews": [],
-                    "scaffolds": [],
-                    "submitter_id": "",
-                    "thumbnails": []
-                },
-            }
-        }
+        "description": "Successfully return a list of queried datasets",
+        "content": {"application/json": {"example": [{
+            "cases": [], "dataset_descriptions": [],  "id": "", "plots": [], "scaffoldViews": [], "scaffolds": [], "submitter_id": "", "thumbnails": []
+        }]}}
     }
 }
 
@@ -227,72 +129,22 @@ class GraphQLPaginationItem(BaseModel):
 
 
 pagination_responses = {
-    **responses,
     200: {
-        "description": "A list of datasets",
-        "content": {
-            "application/json": {
-                "example": {
-                    "items": [
-                        {
-                            "data_url": "",
-                            "source_url_prefix": "",
-                            "contributors": [],
-                            "keywords": [
-                                ""
-                            ],
-                            "numberSamples": 0,
-                            "numberSubjects": 0,
-                            "name": "",
-                            "datasetId": "",
-                            "organs": [
-                                ""
-                            ],
-                            "species": [],
-                            "plots": [],
-                            "scaffoldViews": [],
-                            "scaffolds": [],
-                            "thumbnails": [],
-                            "detailsReady": True
-                        },
-                    ]
-                }
-            }
-        }
+        "description": "Successfully return a list of datasets information",
+        "content": {"application/json": {"example": {
+            "items": [{"data_url": "", "source_url_prefix": "", "contributors": [], "keywords": [], "numberSamples": 0, "numberSubjects": 0, "name": "", "datasetId": "", "organs": [], "species": [], "plots": [], "scaffoldViews": [], "scaffolds": [], "thumbnails": [], "detailsReady": True}]
+        }}}
     }
 }
 
 
 filter_responses = {
-    **responses,
     200: {
-        "description": "Filter information",
-        "content": {
-            "application/json": {
-                "example": {
-                    "normal": {
-                        "size": 0,
-                        "titles": [],
-                        "nodes": [],
-                        "fields": [],
-                        "elements": [],
-                        "ids": []
-                    },
-                    "sidebar": [
-                        {
-                            "key": "",
-                            "label": "",
-                            "children": [
-                                {
-                                    "facetPropPath": "",
-                                    "label": ""
-                                }
-                            ]
-                        },
-                    ]
-                }
-            }
-        }
+        "description": "Successfully return filter information",
+        "content": {"application/json": {"example": {
+            "normal": {"size": 0, "titles": [], "nodes": [], "fields": [], "elements": [], "ids": []},
+            "sidebar": [{"key": "", "label": "", "children": [{"facetPropPath": "",  "label": ""}]}]
+        }}}
     }
 }
 
@@ -319,61 +171,24 @@ class CollectionItem(BaseModel):
 
 root_responses = {
     200: {
-        "description": "All folders/files name and path under root folder",
-        "content": {
-            "application/json": {
-                "example": {
-                    "folders": [
-                        {
-                            "name": "",
-                            "path": ""
-                        }
-                    ],
-                    "files": [
-                        {
-                            "name": "",
-                            "path": ""
-                        }
-                    ]
-                }
-            }
-        }
+        "description": "Successfully return all folders/files name and path under root folder",
+        "content": {"application/json": {"example": {
+            "folders": [], "files": []
+        }}}
     }
 }
 
 
 sub_responses = {
-    **responses,
     200: {
-        "description": "All folders/files name and path under selected folder",
-        "content": {
-            "application/json": {
-                "example": {
-                    "folders": [
-                        {
-                            "name": "",
-                            "path": ""
-                        }
-                    ],
-                    "files": [
-                        {
-                            "name": "",
-                            "path": ""
-                        }
-                    ]
-                }
-            }
-        }
+        "description": "Successfully return all folders/files name and path under selected folder",
+        "content": {"application/json": {"example": {
+            "folders": [], "files": []
+        }}}
     },
-    404: {
-        "content": {
-            "application/json": {
-                "example": {
-                    "detail": "Data not found in the provided path"
-                }
-            }
-        }
-    }
+    404: {"content": {"application/json": {"example": {
+        "detail": "Data not found in the provided path"
+    }}}}
 }
 
 
