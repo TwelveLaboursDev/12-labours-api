@@ -42,8 +42,6 @@ IRODS_ZONE =
 
 # This is the deployment url for current backend
 BASE_URL =
-# This is the deployment url for the 12 labours portal
-PORTAL_URL =
 ```
 
 ## Running the app
