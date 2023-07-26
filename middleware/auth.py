@@ -23,16 +23,21 @@ class Authenticator(object):
         self.expire = 2
 
     def delete_expired_user(self, user):
+        print("enter delete_expired_user")
+        print(user)
+        print(self.authorized_user)
+        print(self.authorized_user[user])
         try:
             current_time = datetime.utcnow()
-            expire_time = self.authorized_user[user].get_user_expire_time()
             print(current_time)
+            expire_time = self.authorized_user[user].get_user_expire_time()
             print(expire_time)
             print(current_time >= expire_time)
             if current_time >= expire_time:
                 del self.authorized_user[user]
             return
         except:
+            print("error?")
             pass
 
     def cleanup_authorized_user(self):
@@ -49,10 +54,13 @@ class Authenticator(object):
                 # Token will always be decoded
                 decrypt_identity = jwt.decoding_tokens(token)["identity"]
                 print(decrypt_identity)
+                print(self.authorized_user)
                 if auth_type == None:
+                    print("auth_type == None")
                     # Check and remove expired user
                     # Currently should only for self.gain_user_authority
                     self.delete_expired_user(decrypt_identity)
+                    print(self.authorized_user)
                 return self.authorized_user[decrypt_identity]
         except Exception:
             raise HTTPException(
