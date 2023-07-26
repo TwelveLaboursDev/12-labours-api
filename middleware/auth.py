@@ -26,8 +26,12 @@ class Authenticator(object):
         try:
             current_time = datetime.utcnow()
             expire_time = self.authorized_user[user].get_user_expire_time()
+            print(current_time)
+            print(expire_time)
+            print(current_time >= expire_time)
             if current_time >= expire_time:
                 del self.authorized_user[user]
+            return
         except:
             pass
 
@@ -42,9 +46,9 @@ class Authenticator(object):
             if token == "undefined":
                 return self.authorized_user["public"]
             else:
-                jwt = JWT()
                 # Token will always be decoded
                 decrypt_identity = jwt.decoding_tokens(token)["identity"]
+                print(decrypt_identity)
                 if auth_type == None:
                     # Check and remove expired user
                     # Currently should only for self.gain_user_authority
@@ -59,6 +63,7 @@ class Authenticator(object):
 
     async def gain_user_authority(self, token: HTTPAuthorizationCredentials = Depends(security)):
         verify_user = self.authenticate_token(token.credentials)
+        print(verify_user.get_user_detail())
         return verify_user.get_user_scope()
     
     async def revoke_user_authority(self, token: HTTPAuthorizationCredentials = Depends(security)):
