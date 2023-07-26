@@ -42,6 +42,7 @@ class Authenticator(object):
             if token == "undefined":
                 return self.authorized_user["public"]
             else:
+                jwt = JWT()
                 # Token will always be decoded
                 decrypt_identity = jwt.decoding_tokens(token)["identity"]
                 if auth_type == None:
