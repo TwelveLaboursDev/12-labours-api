@@ -409,7 +409,7 @@ async def get_irods_data_file(action: ActionParam, filepath: str, connected: boo
     def handle_header():
         header = None
         if action == "download":
-            header = {"x-file-name": file.name,
+            header = {"X-File-Name": file.name,
                       "Content-Disposition": f"attachment;filename={file.name}"}
         return header
 
