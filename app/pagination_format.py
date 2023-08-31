@@ -4,7 +4,7 @@ import json
 
 class PaginationFormat(object):
     def __init__(self, fg):
-        self.FG = fg
+        self.FILTER_MAP = fg.get_filter_map()
 
     def update_thumbnail(self, data):
         result = []
@@ -23,7 +23,7 @@ class PaginationFormat(object):
                 "path": []
             }
         }
-        data = json.loads(re.sub("\'", '\"', cite))
+        data = json.loads(re.sub('\'', '\"', cite))
         for ele in data:
             full_path_list = filename.split("/")
             full_path_list[-1] = ele.split("/")[-1]
@@ -101,16 +101,14 @@ class PaginationFormat(object):
         return result
 
     def update_species(self, data):
-        FILTERS = self.FG.get_filters()
         result = []
         if data == []:
             return result
         for ele in data:
-            subspecies = ele.get("species")
-            if subspecies != "NA":
-                species_dict = FILTERS["MAPPED_SPECIES"]["facets"]
-                species = list(species_dict.keys())[list(
-                    species_dict.values()).index(subspecies)]
+            if ele["species"] != "NA":
+                species_filter = self.FILTER_MAP["MAPPED_SPECIES"]["facets"]
+                species = list(species_filter.keys())[list(
+                    species_filter.values()).index(ele["species"])]
                 if species not in result:
                     result.append(species)
         return result
@@ -130,11 +128,9 @@ class PaginationFormat(object):
         result = []
         for ele in data:
             dataset_id = ele["submitter_id"]
-            access = ele["project_id"]
             image_url_middle = f"/data/preview/{dataset_id}/"
             dataset_item = {
-                "belong_to": access,
-                "data_url_suffix": f"/data/browser/dataset/{dataset_id}?datasetTab=abstract&access={access}",
+                "data_url_suffix": f"/data/browser/dataset/{dataset_id}?datasetTab=abstract",
                 "source_url_middle": f"/data/download/{dataset_id}/",
                 "contributors": self.update_contributor(ele["dataset_descriptions"][0]["contributor_name"]),
                 "keywords": ele["dataset_descriptions"][0]["keywords"],

@@ -1,54 +1,50 @@
-from fastapi import HTTPException, status
+import re
 
 
 class QueryFormat(object):
-    def __init__(self, fg, f):
-        self.FILTERS = fg.get_filters()
-        self.FIELDS = f.get_fields()
+    def __init__(self, fg):
+        self.FILTER_MAP = fg.get_filter_map()
+        self.mode = None
+
+    def set_mode(self, mode):
+        self.mode = mode
 
     def generate_related_mri(self, data):
-        mri_path = {}
+        mri_paths = {}
         for mri in data["mris"]:
-            file_path = mri["filename"]
-            start = file_path.rindex("/") + 1
-            end = file_path.rindex("_")
-            filename = file_path[start:end]
-            if filename not in mri_path:
-                mri_path[filename] = [file_path]
+            filepath = mri["filename"]
+            start = filepath.rindex("/") + 1
+            end = filepath.rindex("_")
+            filename = filepath[start:end]
+            if filename not in mri_paths:
+                mri_paths[filename] = [filepath]
             else:
-                mri_path[filename].append(file_path)
-        return mri_path
-
-    def handle_detail_mode(self, related_facet, filter_facet, mapped_element):
-        title = self.FILTERS[mapped_element]["title"].capitalize()
-        if title in related_facet and filter_facet not in related_facet[title]:
-            related_facet[title].append(filter_facet)
-        else:
-            related_facet[title] = [filter_facet]
+                mri_paths[filename].append(filepath)
+        return mri_paths
 
     def handle_facet_mode(self, related_facet, filter_facet, mapped_element):
         if filter_facet not in related_facet:
             # Based on mapintergratedvuer map sidebar required filter format
             facet_object = {}
             facet_object["facet"] = filter_facet
-            facet_object["term"] = self.FILTERS[mapped_element]["title"].capitalize(
+            facet_object["term"] = self.FILTER_MAP[mapped_element]["title"].capitalize(
             )
-            facet_object["facetPropPath"] = self.FILTERS[mapped_element]["node"] + \
-                ">" + self.FILTERS[mapped_element]["field"]
+            facet_object["facetPropPath"] = self.FILTER_MAP[mapped_element]["node"] + \
+                ">" + self.FILTER_MAP[mapped_element]["field"]
             related_facet[filter_facet] = facet_object
 
-    def handle_facet_structure(self, related_facet, filter_facet, mapped_element, mode):
-        if mode == "detail":
-            self.handle_detail_mode(
-                related_facet, filter_facet, mapped_element)
-        elif mode == "facet":
-            self.handle_facet_mode(related_facet, filter_facet, mapped_element)
+    def handle_detail_mode(self, related_facet, filter_facet, mapped_element):
+        title = self.FILTER_MAP[mapped_element]["title"].capitalize()
+        if title in related_facet and filter_facet not in related_facet[title]:
+            related_facet[title].append(filter_facet)
+        else:
+            related_facet[title] = [filter_facet]
 
-    def handle_facet_check(self, facet_value, field, field_value):
+    def handle_facet_check(self, facet_value, field_value):
         if type(facet_value) == str:
             # For study_organ_system
             # Array type field
-            if field in self.FIELDS and facet_value in field_value:
+            if type(field_value) == list and facet_value in field_value:
                 return True
             # For age_category/sex/species
             # String type field
@@ -59,15 +55,21 @@ class QueryFormat(object):
             return True
         return False
 
-    def handle_facet(self, related_facet, field, field_value, mode):
+    def handle_facet_structure(self, related_facet, field, data):
         mapped_element = f"MAPPED_{field.upper()}"
-        for filter_facet, facet_value in self.FILTERS[mapped_element]["facets"].items():
-            if self.handle_facet_check(facet_value, field, field_value):
-                self.handle_facet_structure(
-                    related_facet, filter_facet, mapped_element, mode)
+        for filter_facet, facet_value in self.FILTER_MAP[mapped_element]["facets"].items():
+            for ele in data:
+                field_value = ele[field]
+                if self.handle_facet_check(facet_value, field_value):
+                    if self.mode == "detail":
+                        self.handle_detail_mode(
+                            related_facet, filter_facet, mapped_element)
+                    elif self.mode == "facet":
+                        self.handle_facet_mode(
+                            related_facet, filter_facet, mapped_element)
 
-    def generate_related_facet(self, data, mode):
-        related_facet = {}
+    def generate_related_facet(self, data):
+        related_facets = {}
         facet_source = [
             "dataset_descriptions>study_organ_system",
             "scaffolds>additional_types",
@@ -80,54 +82,54 @@ class QueryFormat(object):
             key = info.split(">")[0]
             field = info.split(">")[1]
             if key in data and data[key] != []:
-                for ele in data[key]:
-                    self.handle_facet(related_facet, field, ele[field], mode)
-        if mode == "deatil":
-            return related_facet
-        elif mode == "facet":
-            return list(related_facet.values())
+                self.handle_facet_structure(related_facets, field, data[key])
+        if self.mode == "detail":
+            return related_facets
+        elif self.mode == "facet":
+            return list(related_facets.values())
 
-    def update_mris(self, data):
+    def update_mri(self, data):
         mris = []
         for mri in data:
-            file_path = mri["filename"]
-            if "c0" in file_path:
+            filepath = mri["filename"]
+            if "_c0" in filepath:
+                mri["filename"] = re.sub('_c0', '', mri["filename"])
                 mris.append(mri)
         return mris
 
-    def update_dicom_images(self, data):
+    def update_dicom_image(self, data):
         dicom_images = {}
         for dicom in data:
-            file_path = dicom["filename"]
+            filepath = dicom["filename"]
             # Find the last "/" index in the file path
-            index = file_path.rindex("/")
-            folder_path = file_path[:index]
+            index = filepath.rindex("/")
+            folder_path = filepath[:index]
             # Keep only the first dicom data each folder
             if folder_path not in dicom_images:
                 dicom_images[folder_path] = dicom
         return list(dicom_images.values())
 
-    def modify_data_content(self, data):
+    def update_detail_content(self, data):
+        # Combine multiple files within the dataset into one
+        # Only need to display one in the portal
         if data["dicomImages"] != []:
-            dicom_images = self.update_dicom_images(data["dicomImages"])
-            data["dicomImages"] = dicom_images
+            data["dicomImages"] = self.update_dicom_image(data["dicomImages"])
         if data["mris"] != []:
-            mris = self.update_mris(data["mris"])
-            data["mris"] = mris
+            data["mris"] = self.update_mri(data["mris"])
         return data
 
-    def process_data_output(self, data, mode):
+    def process_data_output(self, data):
         result = {}
-        if mode == "data":
+        if self.mode == "data":
             result["data"] = data
-        elif mode == "detail":
-            result["data"] = self.modify_data_content(data)
-            result["facet"] = self.generate_related_facet(data, mode)
-        elif mode == "facet":
-            result["facets"] = self.generate_related_facet(data, mode)
-        elif mode == "mri":
-            result["mris"] = self.generate_related_mri(data)
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=f"Invalid query mode {mode}")
+        elif self.mode == "detail":
+            result["detail"] = self.update_detail_content(data)
+            # Filter format facet
+            result["facet"] = self.generate_related_facet(data)
+        elif self.mode == "facet":
+            # Sidebar format facet
+            result["facet"] = self.generate_related_facet(data)
+        elif self.mode == "mri":
+            # Combine 5 sub-file paths based on filename
+            result["mri"] = self.generate_related_mri(data)
         return result

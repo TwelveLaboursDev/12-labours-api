@@ -3,7 +3,6 @@ import re
 from fastapi import HTTPException, status
 from sgqlc.operation import Operation
 
-from app.data_schema import *
 from app.sgqlc_schema import Query
 
 
@@ -11,7 +10,7 @@ class SimpleGraphQLClient(object):
     def __init__(self, submission):
         self.SUBMISSION = submission
 
-    def remove_node_suffix(self, node, query):
+    def handle_node_suffix(self, node, snake_case_query):
         gen3_node = ""
         if "experiment" in node:
             gen3_node = "experiment"
@@ -21,12 +20,11 @@ class SimpleGraphQLClient(object):
             gen3_node = "manifest"
         elif "case" in node:
             gen3_node = "case"
-        valid_query = re.sub(node, gen3_node, query)
+        valid_query = re.sub(node, gen3_node, snake_case_query)
         valid_node = re.sub(node, gen3_node, node)
         return valid_query, valid_node
 
-    def update_manifests_information(self, item, query):
-        query_with_classification = query
+    def handle_classification(self, item, snake_case_query):
         access_scope = re.sub('\'', '\"', f"{item.access}")
         data = {
             # Choose the number of data to display, 0 here means display everything
@@ -39,26 +37,44 @@ class SimpleGraphQLClient(object):
         }
 
         for key in data:
-            query_with_classification = re.sub(
+            snake_case_query = re.sub(
                 key,
                 f'{data[key][0]}: manifests(first:0, offset:0, {data[key][1]}: {data[key][2]}, project_id: {access_scope}, order_by_asc:"submitter_id")',
-                query_with_classification
+                snake_case_query
             )
-        return query_with_classification
+        return snake_case_query
+
+    def handle_null_argument(self, snake_case_query):
+        if "null" in snake_case_query:
+            snake_case_query = re.sub(
+                '[,]? [_a-z]+: null',
+                '',
+                snake_case_query
+            )
+        return snake_case_query
+
+    def handle_snake_case(self, query):
+        snake_case_query = re.sub(
+            '_[A-Z]',
+            lambda x:  x.group(0).lower(),
+            re.sub(
+                '([a-z])([A-Z])',
+                r'\1_\2',
+                str(query)
+            )
+        )
+        return snake_case_query
 
     def convert_query(self, item, query):
         # Convert camel case to snake case
-        snake_case_query = re.sub(
-            '_[A-Z]', lambda x:  x.group(0).lower(), re.sub('([a-z])([A-Z])', r'\1_\2', str(query)))
+        snake_case_query = self.handle_snake_case(query)
         # Remove all null filter arguments, this can simplify the generate_query function
-        if "null" in snake_case_query:
-            snake_case_query = re.sub(
-                '[,]? [_a-z]+: null', '', snake_case_query)
+        snake_case_query = self.handle_null_argument(snake_case_query)
         # Either pagination or experiment node query
         if "experiment" in item.node and "count" not in item.node:
-            snake_case_query = self.update_manifests_information(
+            snake_case_query = self.handle_classification(
                 item, snake_case_query)
-        snake_case_query, item.node = self.remove_node_suffix(
+        snake_case_query, item.node = self.handle_node_suffix(
             item.node, snake_case_query)
         return "{" + snake_case_query + "}"
 
@@ -205,10 +221,10 @@ class SimpleGraphQLClient(object):
 
         query = self.generate_query(item)
         try:
-            result = self.SUBMISSION.query(query)["data"]
+            result = self.SUBMISSION.query(query)["data"][item.node]
             if key != None and queue != None:
-                queue.put({key: result[item.node]})
+                queue.put({key: result})
             return result
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=str(e))

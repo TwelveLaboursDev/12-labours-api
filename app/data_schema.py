@@ -2,8 +2,6 @@ from enum import Enum
 from typing import Union
 from pydantic import BaseModel
 
-from app.config import Gen3Config
-
 title = "12 Labours Portal"
 
 contact = {
@@ -73,15 +71,9 @@ tags_metadata = [
 ]
 
 
-class IdentityItem(BaseModel):
-    identity: Union[str, None] = None
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "identity": "fakeemail@gmail.com>machine_id",
-            }
-        }
+#####################
+### DOCS RESPONSE ###
+#####################
 
 
 access_token_responses = {
@@ -102,89 +94,33 @@ access_revoke_responses = {
 }
 
 
-dictionary_responses = {
-    200: {
-        "description": "Successfully return a list of Gen3 dictionary name",
-        "content": {"application/json": {"example": {"dictionary": []}}}
-    }
-}
-
-
 record_responses = {
     200: {
         "description": "Successfully return a json object contains gen3 record metadata",
         "content": {"application/json": {"example": [{
-            "id": "", "type": "experiment", "project_id": "", "submitter_id": "",
-            "associated_experiment": "", "copy_numbers_identified": "", "data_description": "", "experimental_description": "",
-            "experimental_intent": "", "indels_identified": "", "marker_panel_description": "", "number_experimental_group": "",
-            "number_samples_per_experimental_group": "", "somatic_mutations_identified": "", "type_of_data": "", "type_of_sample": "",
-            "type_of_specimen": ""
-        }]}}
+            "id": "", "type": "", "submitter_id": "", "associated_experiment": "",
+            "copy_numbers_identified": "", "data_description": "", "experimental_description": "",
+            "experimental_intent": "", "indels_identified": "", "marker_panel_description": "",
+            "number_experimental_group": "", "number_samples_per_experimental_group": "", "somatic_mutations_identified": "",
+            "type_of_data": "", "type_of_sample": "", "type_of_specimen": ""}]}}
     },
     404: {"content": {"application/json": {"example": {"detail": "Unable to find xxx and check if the correct project or uuid is used"}}}}
 }
 
 
-class ModeParam(str, Enum):
-    data = "data"
-    detail = "detail"
-    facet = "facet"
-    mri = "mri"
-
-
-class GraphQLQueryItem(BaseModel):
-    node: Union[str, None] = None
-    page: Union[int, None] = None
-    limit: Union[int, None] = None
-    filter: Union[dict, None] = {}
-    search: Union[str, None] = ""
-    access: Union[list, None] = [Gen3Config.GEN3_PUBLIC_ACCESS]
-    asc: Union[str, None] = None
-    desc: Union[str, None] = None
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "node": "experiment_query",
-                "filter": {"submitter_id": ["dataset-102-version-4"]},
-                "search": "",
-                "access": [Gen3Config.GEN3_PUBLIC_ACCESS]
-            }
-        }
-
-
 query_responses = {
     200: {
         "description": "Successfully return a list of queried datasets",
-        "content": {"application/json": {"example": [{
-            "cases": [], "dataset_descriptions": [],  "id": "", "plots": [],
-            "scaffoldViews": [], "scaffolds": [], "submitter_id": "", "thumbnails": []
-        }]}}
-    }
+        "content": {"application/json": {"example": {
+            "data mode": {"data": {"cases": [], "dataset_descriptions": [],  "id": "", "plots": [],
+                                   "scaffoldViews": [], "scaffolds": [], "submitter_id": "", "thumbnails": []}},
+            "detail mode": {"detail": {}, "facet": {}},
+            "facet mode": {"facet": [{"facet": "", "term": "", "facetPropPath": ""}]},
+            "mri mode": {"mri": {"filename": ["filepath"]}}
+        }}}
+    },
+    400: {"content": {"application/json": {"example": {"detail": "Mode detail/facet/mri only available when query one dataset in experiment node"}}}}
 }
-
-
-class GraphQLPaginationItem(BaseModel):
-    node: Union[str, None] = "experiment_pagination"
-    page: Union[int, None] = 1
-    limit: Union[int, None] = 50
-    filter: Union[dict, None] = {}
-    search: Union[dict, None] = {}
-    relation: Union[str, None] = "and"
-    access: Union[list, None] = [Gen3Config.GEN3_PUBLIC_ACCESS]
-    order: Union[str, None] = "published(asc)"
-    asc: Union[str, None] = None
-    desc: Union[str, None] = None
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "page": 1,
-                "limit": 50,
-                "filter": {},
-                "access": [Gen3Config.GEN3_PUBLIC_ACCESS]
-            }
-        }
 
 
 pagination_responses = {
@@ -196,7 +132,9 @@ pagination_responses = {
                 "numberSamples": 0, "numberSubjects": 0, "name": "", "datasetId": "",
                 "organs": [], "species": [], "plots": [], "scaffoldViews": [],
                 "scaffolds": [], "thumbnails": [], "detailsReady": True
-            }]
+            }],
+            "numberPerPage": "",
+            "total": ""
         }}}
     }
 }
@@ -216,9 +154,100 @@ filter_responses = {
 }
 
 
-class FormatParam(str, Enum):
-    json = "json"
-    tsv = "tsv"
+collection_responses = {
+    200: {
+        "description": "Successfully return all folders/files name and path under selected folder",
+        "content": {"application/json": {"example": {"folders": [], "files": []}}}
+    },
+    400: {"content": {"application/json": {"example": {"detail": "Invalid path format is used"}}}},
+    404: {"content": {"application/json": {"example": {"detail": "Data not found in the provided path"}}}}
+}
+
+
+instance_responses = {
+    200: {
+        "description": "Successfully return all folders/files name and path under selected folder",
+        "content": {"application/json": {"example": []}}
+    },
+    400: {"content": {"application/json": {"example": {"detail": "Missing one or more fields in the request body"}}}},
+    401: {"content": {"application/json": {"example": {"detail": "Invalid orthanc username or password are used"}}}},
+    404: {"content": {"application/json": {"example": {"detail": "Resource is not found in the orthanc server"}}}}
+}
+
+
+#############
+### PARAM ###
+#############
+
+
+class ModeParam(str, Enum):
+    data = "data"
+    detail = "detail"
+    facet = "facet"
+    mri = "mri"
+
+
+class ActionParam(str, Enum):
+    preview = "preview"
+    download = "download"
+
+
+############
+### ITEM ###
+############
+
+
+class IdentityItem(BaseModel):
+    identity: Union[str, None] = None
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "identity": "fakeemail@gmail.com>machine_id",
+            }
+        }
+
+
+class GraphQLQueryItem(BaseModel):
+    node: Union[str, None] = None
+    page: Union[int, None] = None
+    limit: Union[int, None] = None
+    filter: Union[dict, None] = {}
+    search: Union[str, None] = ""
+    access: Union[list, None] = None
+    asc: Union[str, None] = None
+    desc: Union[str, None] = None
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "node": "experiment_query",
+                "filter": {"submitter_id": ["dataset-102-version-4"]},
+                "search": ""
+            }
+        }
+
+
+class GraphQLPaginationItem(BaseModel):
+    node: Union[str, None] = "experiment_pagination"
+    page: Union[int, None] = 1
+    limit: Union[int, None] = 50
+    filter: Union[dict, None] = {}
+    search: Union[dict, None] = {}
+    relation: Union[str, None] = "and"
+    access: Union[list, None] = None
+    order: Union[str, None] = "published(asc)"
+    asc: Union[str, None] = None
+    desc: Union[str, None] = None
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "page": 1,
+                "limit": 50,
+                "filter": {},
+            }
+        }
 
 
 class CollectionItem(BaseModel):
@@ -232,21 +261,6 @@ class CollectionItem(BaseModel):
         }
 
 
-collection_responses = {
-    200: {
-        "description": "Successfully return all folders/files name and path under selected folder",
-        "content": {"application/json": {"example": {"folders": [], "files": []}}}
-    },
-    400: {"content": {"application/json": {"example": {"detail": "Invalid path format is used"}}}},
-    404: {"content": {"application/json": {"example": {"detail": "Data not found in the provided path"}}}}
-}
-
-
-class ActionParam(str, Enum):
-    preview = "preview"
-    download = "download"
-
-
 class InstanceItem(BaseModel):
     study: Union[str, None] = None
     series: Union[str, None] = None
@@ -258,14 +272,3 @@ class InstanceItem(BaseModel):
                 "series": "",
             }
         }
-
-
-instance_responses = {
-    200: {
-        "description": "Successfully return all folders/files name and path under selected folder",
-        "content": {"application/json": {"example": []}}
-    },
-    400: {"content": {"application/json": {"example": {"detail": "Missing one or more fields in the request body"}}}},
-    401: {"content": {"application/json": {"example": {"detail": "Invalid orthanc username or password are used"}}}},
-    404: {"content": {"application/json": {"example": {"detail": "Resource is not found in the orthanc server"}}}}
-}
