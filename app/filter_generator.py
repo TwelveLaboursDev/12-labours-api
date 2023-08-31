@@ -82,6 +82,7 @@ class FilterGenerator(object):
         for scope in access_scope:
             if scope != self.public_access[0]:
                 self.private_access.append(scope)
+        print(self.private_access)
 
     def add_facet(self, filter_facets, exist_facets, value):
         name = value.capitalize()
