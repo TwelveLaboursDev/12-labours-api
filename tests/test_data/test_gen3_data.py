@@ -44,7 +44,7 @@ def test_experiment_node(client, token):
     assert result["record"]["type"] == "experiment"
     assert isinstance(result["record"]["type"], str)
 
-    assert result["record"]["project_id"] == Gen3Config.GEN3_PUBLIC_ACCESS
+    assert result["record"]["project_id"] in Gen3Config.GEN3_PUBLIC_ACCESS.split(",")
     assert isinstance(result["record"]["project_id"], str)
 
     assert result["record"]["submitter_id"] == "dataset-217-version-2"
@@ -85,7 +85,7 @@ def test_dataset_description_node(client, token):
     assert result["record"]["type"] == "dataset_description"
     assert isinstance(result["record"]["type"], str)
 
-    assert result["record"]["project_id"] == Gen3Config.GEN3_PUBLIC_ACCESS
+    assert result["record"]["project_id"] in Gen3Config.GEN3_PUBLIC_ACCESS.split(",")
     assert isinstance(result["record"]["project_id"], str)
 
     assert (
@@ -186,7 +186,7 @@ def test_manifest_node(client, token):
     assert result["record"]["type"] == "manifest"
     assert isinstance(result["record"]["type"], str)
 
-    assert result["record"]["project_id"] == Gen3Config.GEN3_PUBLIC_ACCESS
+    assert result["record"]["project_id"] in Gen3Config.GEN3_PUBLIC_ACCESS.split(",")
     assert isinstance(result["record"]["project_id"], str)
 
     assert (
@@ -240,7 +240,7 @@ def test_case_node(client, token):
     assert result["record"]["type"] == "case"
     assert isinstance(result["record"]["type"], str)
 
-    assert result["record"]["project_id"] == Gen3Config.GEN3_PUBLIC_ACCESS
+    assert result["record"]["project_id"] in Gen3Config.GEN3_PUBLIC_ACCESS.split(",")
     assert isinstance(result["record"]["project_id"], str)
 
     assert result["record"]["submitter_id"] == "dataset-46-version-2-subjects-sub-11011"

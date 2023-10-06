@@ -11,7 +11,6 @@ Functional APIs provided by the server
 - /instance
 - /dicom/export/{identifier}
 """
-import copy
 import io
 import logging
 import mimetypes
@@ -292,8 +291,10 @@ def _handle_private_filter(access_scope):
     Handler for generating private access and private filter
     """
     private_filter = {}
-    private_access = copy.deepcopy(access_scope)
-    private_access.remove(Gen3Config.GEN3_PUBLIC_ACCESS)
+    public_access = Gen3Config.GEN3_PUBLIC_ACCESS.split(",")
+    # access_scope contains all user access, it will contain all public access
+    # Only generate private filter when usr has extra access
+    private_access = list(set(access_scope) - set(public_access))
     if private_access:
         private_filter = FG.generate_private_filter(private_access)
     return private_filter
