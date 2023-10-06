@@ -22,7 +22,16 @@ class ExternalService:
                 "connection": None,
                 "status": False,
             },
-            "irods": {"object": iRODSService(), "connection": None, "status": False},
+            "irods": {
+                "object": iRODSService("irods"),
+                "connection": None,
+                "status": False,
+            },
+            "irods_ep": {
+                "object": iRODSService("irods_ep"),
+                "connection": None,
+                "status": False,
+            },
             "orthanc": {
                 "object": OrthancService(),
                 "connection": None,
@@ -30,11 +39,18 @@ class ExternalService:
             },
         }
 
-    def get(self, service):
+    def use(self, service):
         """
         Handler for getting service object
         """
-        return self.__services[service]["object"]
+        # Make sure service connection exist and is valid
+        #
+        if (
+            self.__services[service]["connection"]
+            and self.__services[service]["status"]
+        ):
+            return self.__services[service]["object"]
+        return None
 
     def check_service_status(self, startup=False):
         """
