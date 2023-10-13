@@ -4,9 +4,12 @@ Functionality for processing query data output
 - process_data_output
 """
 import re
+from datetime import datetime
+
+from app.function.formatter import Formatter
 
 
-class QueryFormatter:
+class QueryFormatter(Formatter):
     """
     fe -> filter editor object is required
     """
@@ -132,7 +135,62 @@ class QueryFormatter:
                 self._update_related_facet(related_facets, field, data[key])
         if self.__query_mode == "detail":
             return related_facets
-        return list(related_facets.values())
+        result = list(related_facets.values())
+        return result
+
+    def _handle_contributor_orcid(self, data):
+        """
+        Handler for updating the contributor format
+        """
+        result = []
+        if data == []:
+            return result
+        for _ in data:
+            contributor_orcid = {"orcid": _}
+            result.append(contributor_orcid)
+        return result
+
+    def _construct_query_format(self, data):
+        """
+        Reconstructing the structure to support portal services
+        """
+        dataset_description = data["dataset_descriptions"][0]
+        submitter_id = data["submitter_id"]
+        uuid = data["id"]
+        preview_url_middle = f"/data/preview/{submitter_id}/"
+        dataset_format = {
+            "source_url_middle": f"/data/download/{submitter_id}/",
+            "contributors": super().handle_contributor(
+                dataset_description["contributor_name"]
+            ),
+            "contributor_orcids": self._handle_contributor_orcid(
+                dataset_description["contributor_orcid"]
+            ),
+            "numberSamples": int(dataset_description["number_of_samples"][0]),
+            "numberSubjects": int(dataset_description["number_of_subjects"][0]),
+            "name": dataset_description["title"][0],
+            "datasetId": submitter_id,
+            "plots": super().handle_manifest(uuid, preview_url_middle, data["plots"]),
+            "scaffoldViews": super().handle_manifest(
+                uuid, preview_url_middle, data["scaffoldViews"], True
+            ),
+            "scaffolds": super().handle_manifest(
+                uuid, preview_url_middle, data["scaffolds"]
+            ),
+            "thumbnails": super().handle_manifest(
+                uuid,
+                preview_url_middle,
+                super().handle_thumbnail(data["thumbnails"]),
+                True,
+            ),
+            "mris": super().handle_manifest(uuid, preview_url_middle, data["mris"]),
+            "dicomImages": super().handle_manifest(
+                uuid, preview_url_middle, data["dicomImages"]
+            ),
+            "created": data["created_datetime"],
+            "updated": data["updated_datetime"],
+        }
+        return dataset_format
 
     def _handle_mri(self, data):
         """
@@ -159,7 +217,8 @@ class QueryFormatter:
             # Keep only the first dicom data each folder
             if folder_path not in dicom_images:
                 dicom_images[folder_path] = _
-        return list(dicom_images.values())
+        result = list(dicom_images.values())
+        return result
 
     def _handle_detail_content(self, data):
         """
@@ -171,7 +230,8 @@ class QueryFormatter:
             data["dicomImages"] = self._handle_dicom_image(data["dicomImages"])
         if data["mris"] != []:
             data["mris"] = self._handle_mri(data["mris"])
-        return data
+        result = self._construct_query_format(data)
+        return result
 
     def process_data_output(self, data):
         """

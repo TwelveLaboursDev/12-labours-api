@@ -94,7 +94,7 @@ def test_get_gen3_graphql_query(client, token):
     )
     result = response.json()
     assert response.status_code == 200
-    assert result["detail"]["submitter_id"] == DATASET_ID
+    assert result["detail"]["datasetId"] == DATASET_ID
     assert result["facet"] == {
         "Anatomical structure": ["Brainstem"],
         "Data type": ["Scaffold"],

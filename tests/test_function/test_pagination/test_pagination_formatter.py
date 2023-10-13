@@ -5,8 +5,8 @@ from tests.test_function.test_pagination.fixture import (
 )
 
 
-def test_reconstruct_data_structure(pf_class, dummy_pagination_data):
-    result = pf_class.reconstruct_data_structure(dummy_pagination_data)[0]
+def test_construct_pagination_format(pf_class, dummy_pagination_data):
+    result = pf_class.construct_pagination_format(dummy_pagination_data)[0]
     assert (
         result["data_url_suffix"]
         == "/data/browser/dataset/dummy submitter?datasetTab=abstract"

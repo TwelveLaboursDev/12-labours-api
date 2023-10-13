@@ -432,7 +432,7 @@ async def get_gen3_graphql_pagination(
             key=lambda dict: item.filter["submitter_id"].index(dict["submitter_id"]),
         )
     result = {
-        "items": PF.reconstruct_data_structure(query_result),
+        "items": PF.construct_pagination_format(query_result),
         "numberPerPage": item.limit,
         "total": data_count,
     }
