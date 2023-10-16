@@ -56,7 +56,7 @@ class FilterGenerator:
         field = element_content["field"]
         for _ in self.__cache[node]:
             field_value = _[field]
-            if isinstance(field_value, list) and field_value != []:
+            if isinstance(field_value, list) and field_value:
                 for sub_value in field_value:
                     self._update_facet(facets, exist_facets, sub_value)
             elif isinstance(field_value, str) and field_value != "NA":

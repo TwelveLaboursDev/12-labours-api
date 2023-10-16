@@ -35,7 +35,7 @@ class SearchLogic:
                 content_list = re.findall(
                     rf"(\s{keyword}|{keyword}\s)", _[DataObjectMeta.value]
                 )
-                if content_list != []:
+                if content_list:
                     dataset = re.sub(
                         f"{iRODSConfig.IRODS_ROOT_PATH}/", "", _[Collection.name]
                     )
@@ -64,7 +64,7 @@ class SearchLogic:
         """
         # Search result has order, we need to update item.filter value based on search result
         # The relationship between search and filter will always be AND
-        if item.filter != {}:
+        if item.filter:
             datasets = []
             for dataset_id in item.search["submitter_id"]:
                 if dataset_id in item.filter["submitter_id"]:

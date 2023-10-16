@@ -131,7 +131,7 @@ class QueryFormatter(Formatter):
         for _ in self._handle_facet_source():
             key = _.split(">")[0]
             field = _.split(">")[1]
-            if key in data and data[key] != []:
+            if key in data and data[key]:
                 self._update_related_facet(related_facets, field, data[key])
         if self.__query_mode == "detail":
             return related_facets
@@ -143,7 +143,7 @@ class QueryFormatter(Formatter):
         Handler for updating the contributor format
         """
         result = []
-        if data == []:
+        if not data:
             return result
         for _ in data:
             contributor_orcid = {"orcid": _}
@@ -226,9 +226,9 @@ class QueryFormatter(Formatter):
         """
         # Combine multiple files within the dataset into one
         # Only need to display one in the portal
-        if data["dicomImages"] != []:
+        if data["dicomImages"]:
             data["dicomImages"] = self._handle_dicom_image(data["dicomImages"])
-        if data["mris"] != []:
+        if data["mris"]:
             data["mris"] = self._handle_mri(data["mris"])
         result = self._construct_query_format(data)
         return result

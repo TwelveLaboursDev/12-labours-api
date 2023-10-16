@@ -128,7 +128,7 @@ class PaginationLogic:
         item.access.remove(self.__public_access[0])
         items = []
         # Query displayed datasets which have private version
-        if match_pair != []:
+        if match_pair:
             for dataset in match_pair:
                 if dataset in displayed_dataset:
                     query_item = GraphQLQueryItem(
@@ -216,7 +216,7 @@ class PaginationLogic:
         has_search_result = False
 
         # FILTER
-        if item.filter != {}:
+        if item.filter:
             items = []
             for node_filed, facets in item.filter.items():
                 filter_node = node_filed.split(">")[0]
@@ -238,11 +238,11 @@ class PaginationLogic:
             self.__fl.implement_filter_relation(item)
 
         # SEARCH
-        if input_ != "":
+        if input_:
             # If input does not match any content in the database, item.search will be empty
             item.search = self.__sl.generate_searched_dataset(input_)
-            if item.search["submitter_id"] != [] and (
-                "submitter_id" not in item.filter or item.filter["submitter_id"] != []
+            if item.search["submitter_id"] and (
+                "submitter_id" not in item.filter or item.filter["submitter_id"]
             ):
                 has_search_result = True
                 self.__sl.implement_search_filter_relation(item)

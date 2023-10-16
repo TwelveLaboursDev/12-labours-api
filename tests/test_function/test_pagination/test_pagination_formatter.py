@@ -398,4 +398,4 @@ def test_construct_pagination_format(pf_class, dummy_pagination_data):
             "name": "dummy_filename.dcm",
         },
     ]
-    assert result["detailsReady"] == True
+    assert result["detailsReady"] is True

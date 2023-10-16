@@ -18,7 +18,7 @@ class PaginationFormatter(Formatter):
         Handler for updating the species format
         """
         result = []
-        if data == []:
+        if not data:
             return result
         for _ in data:
             if _["species"] != "NA":

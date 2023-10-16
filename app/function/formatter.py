@@ -8,7 +8,7 @@ class Formatter:
         Handler for updating thumbnail
         """
         result = []
-        if data == []:
+        if not data:
             return result
         for _ in data:
             if _["additional_types"] is None:
@@ -38,7 +38,7 @@ class Formatter:
         cite_path = self._handle_empty(cite)
         full_path = ""
         result = {"path": [], "relative": {"path": []}}
-        if cite_path != "":
+        if cite_path:
             if len(cite_path.split(",")) > 1:
                 result = self._handle_multiple_cite_path(filename, cite_path)
                 return result
@@ -63,7 +63,7 @@ class Formatter:
         """
         result = preview
         if has_image:
-            if is_source_of != "":
+            if is_source_of:
                 path_list = filename.split("/")
                 path_list[-1] = is_source_of.split("/")[-1]
                 filepath = "/".join(path_list)
@@ -123,7 +123,7 @@ class Formatter:
         Handler for updating the contributor format
         """
         result = []
-        if data == []:
+        if not data:
             return result
         for _ in data:
             contributor = {"name": _}
