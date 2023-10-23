@@ -33,6 +33,18 @@ class PaginationFormatter(Formatter):
                     result.append(species)
         return result
 
+    def handle_contributor(self, data):
+        """
+        Handler for updating contributor format.
+        """
+        result = []
+        if not data:
+            return result
+        for _ in data:
+            name = {"name": _}
+            result.append(name)
+        return result
+
     def construct_pagination_format(self, data):
         """
         Reconstructing the structure to support portal services
@@ -46,10 +58,10 @@ class PaginationFormatter(Formatter):
             dataset_format = {
                 "data_url_suffix": f"/data/browser/dataset/{submitter_id}?datasetTab=abstract",
                 "source_url_middle": f"/data/download/{submitter_id}/",
-                "contributors": super().handle_name_object(
+                "contributors": self.handle_contributor(
                     dataset_description["contributor_name"]
                 ),
-                "keywords": dataset_description["keywords"],
+                "keywords": super().handle_keyword(dataset_description["keywords"]),
                 "numberSamples": int(dataset_description["number_of_samples"][0]),
                 "numberSubjects": int(dataset_description["number_of_subjects"][0]),
                 "name": dataset_description["title"][0],

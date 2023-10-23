@@ -138,6 +138,22 @@ class QueryFormatter(Formatter):
         result = list(related_facets.values())
         return result
 
+    def handle_contributor(self, data):
+        """
+        Handler for updating contributor format.
+        """
+        result = []
+        if not data:
+            return result
+        for _ in data:
+            name_list = _.split(", ")
+            if len(name_list) == 2:
+                name = name_list[1] + " " + name_list[0]
+            else:
+                name = name_list[0]
+            result.append(name)
+        return result
+
     def _construct_query_format(self, data):
         """
         Reconstructing the structure to support portal services
@@ -148,27 +164,17 @@ class QueryFormatter(Formatter):
         preview_url_middle = f"/data/preview/{submitter_id}/"
         dataset_format = {
             "source_url_middle": f"/data/download/{submitter_id}/",
-            "contributors": super().handle_name_object(
+            "contributors": self.handle_contributor(
                 dataset_description["contributor_name"]
             ),
-            "contributor_orcids": super().handle_name_object(
-                dataset_description["contributor_orcid"]
-            ),
-            "contributor_affiliations": super().handle_name_object(
-                dataset_description["contributor_affiliation"]
-            ),
-            "identifier": super().handle_name_object(dataset_description["identifier"]),
-            "identifier_type": super().handle_name_object(
-                dataset_description["identifier_type"]
-            ),
-            "keywords": super().handle_name_object(
-                dataset_description["keywords"], True
-            ),
+            "contributor_orcid": dataset_description["contributor_orcid"],
+            "contributor_affiliation": dataset_description["contributor_affiliation"],
+            "identifier": dataset_description["identifier"],
+            "identifier_type": dataset_description["identifier_type"],
+            "keywords": super().handle_keyword(dataset_description["keywords"]),
             "numberSamples": int(dataset_description["number_of_samples"][0]),
             "numberSubjects": int(dataset_description["number_of_subjects"][0]),
-            "study_purpose": super().handle_name_object(
-                dataset_description["study_purpose"]
-            ),
+            "study_purpose": dataset_description["study_purpose"],
             "name": dataset_description["title"][0],
             "subname": dataset_description["subtitle"][0],
             "datasetId": submitter_id,

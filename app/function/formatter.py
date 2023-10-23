@@ -2,7 +2,7 @@
 Base formatting class
 - handle_thumbnail
 - handle_manifest
-- handle_name_object
+- handle_keyword
 """
 import json
 import re
@@ -129,22 +129,15 @@ class Formatter:
             result.append(item)
         return result
 
-    def handle_name_object(self, data, capitalize=False):
+    def handle_keyword(self, data):
         """
-        Handler for updating string content to object format.
-        For fields in dataset_description node.
-        [
-            {"name": ""},
-            ...
-        ]
+        Handler for updating keyword format.
         """
         result = []
         if not data:
             return result
         for _ in data:
-            if capitalize:
-                name = {"name": _.capitalize()}
-            else:
-                name = {"name": _}
+            keyword = _.replace(" ", "")
+            name = keyword.capitalize()
             result.append(name)
         return result
