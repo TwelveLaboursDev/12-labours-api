@@ -1,10 +1,10 @@
 """
 Functionality for processing query data output
 - set_query_mode
+- set_private_filter
 - process_data_output
 """
 import re
-from datetime import datetime
 
 from app.function.formatter import Formatter
 
@@ -138,18 +138,6 @@ class QueryFormatter(Formatter):
         result = list(related_facets.values())
         return result
 
-    def _handle_contributor_orcid(self, data):
-        """
-        Handler for updating the contributor format
-        """
-        result = []
-        if not data:
-            return result
-        for _ in data:
-            contributor_orcid = {"orcid": _}
-            result.append(contributor_orcid)
-        return result
-
     def _construct_query_format(self, data):
         """
         Reconstructing the structure to support portal services
@@ -160,15 +148,29 @@ class QueryFormatter(Formatter):
         preview_url_middle = f"/data/preview/{submitter_id}/"
         dataset_format = {
             "source_url_middle": f"/data/download/{submitter_id}/",
-            "contributors": super().handle_contributor(
+            "contributors": super().handle_name_object(
                 dataset_description["contributor_name"]
             ),
-            "contributor_orcids": self._handle_contributor_orcid(
+            "contributor_orcids": super().handle_name_object(
                 dataset_description["contributor_orcid"]
+            ),
+            "contributor_affiliations": super().handle_name_object(
+                dataset_description["contributor_affiliation"]
+            ),
+            "identifier": super().handle_name_object(dataset_description["identifier"]),
+            "identifier_type": super().handle_name_object(
+                dataset_description["identifier_type"]
+            ),
+            "keywords": super().handle_name_object(
+                dataset_description["keywords"], True
             ),
             "numberSamples": int(dataset_description["number_of_samples"][0]),
             "numberSubjects": int(dataset_description["number_of_subjects"][0]),
+            "study_purpose": super().handle_name_object(
+                dataset_description["study_purpose"]
+            ),
             "name": dataset_description["title"][0],
+            "subname": dataset_description["subtitle"][0],
             "datasetId": submitter_id,
             "plots": super().handle_manifest(uuid, preview_url_middle, data["plots"]),
             "scaffoldViews": super().handle_manifest(

@@ -26,13 +26,45 @@ def test_process_data_output_mode_detail(qf_class, dummy_query_data):
             "name": "dummy name",
         },
     ]
+    assert detail["contributor_orcids"] == [
+        {
+            "name": "dummy orcid",
+        },
+    ]
+    assert detail["contributor_affiliations"] == [
+        {
+            "name": "dummy affiliation",
+        },
+    ]
+    assert detail["identifier"] == [
+        {
+            "name": "dummy identifier",
+        },
+    ]
+    assert detail["identifier_type"] == [
+        {
+            "name": "dummy identifier type",
+        },
+    ]
+    assert detail["keywords"] == [
+        {
+            "name": "Dummy keyword",
+        },
+    ]
     assert detail["numberSamples"] == 12
     assert detail["numberSubjects"] == 12
+    assert detail["study_purpose"] == [
+        {
+            "name": "dummy purpose",
+        },
+    ]
     assert detail["name"] == "dummy title"
+    assert detail["subname"] == "dummy subtitle"
     assert detail["datasetId"] == "dummy submitter"
     assert detail["plots"] == [
         {
             "image_url": "",
+            "additional_metadata": "",
             "additional_mimetype": {
                 "name": "text/vnd.abi.plot+tab-separated-values",
             },
@@ -81,6 +113,7 @@ def test_process_data_output_mode_detail(qf_class, dummy_query_data):
         },
         {
             "image_url": "",
+            "additional_metadata": "",
             "additional_mimetype": {
                 "name": "text/vnd.abi.plot+csv",
             },
@@ -132,6 +165,7 @@ def test_process_data_output_mode_detail(qf_class, dummy_query_data):
     assert detail["scaffolds"] == [
         {
             "image_url": "",
+            "additional_metadata": "",
             "additional_mimetype": {
                 "name": "application/x.vnd.abi.scaffold.meta+json",
             },
@@ -185,6 +219,7 @@ def test_process_data_output_mode_detail(qf_class, dummy_query_data):
     assert detail["mris"] == [
         {
             "image_url": "",
+            "additional_metadata": "",
             "additional_mimetype": {
                 "name": "",
             },
@@ -235,6 +270,7 @@ def test_process_data_output_mode_detail(qf_class, dummy_query_data):
         },
         {
             "image_url": "",
+            "additional_metadata": "",
             "additional_mimetype": {
                 "name": "",
             },
@@ -287,6 +323,7 @@ def test_process_data_output_mode_detail(qf_class, dummy_query_data):
     assert detail["dicomImages"] == [
         {
             "image_url": "",
+            "additional_metadata": "",
             "additional_mimetype": {
                 "name": "application/dicom",
             },

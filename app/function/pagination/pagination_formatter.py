@@ -1,6 +1,6 @@
 """
-Functionality for reconstructing data structure
-- reconstruct_data_structure
+Functionality for constructing pagination format
+- construct_pagination_format
 """
 from app.function.formatter import Formatter
 
@@ -46,7 +46,7 @@ class PaginationFormatter(Formatter):
             dataset_format = {
                 "data_url_suffix": f"/data/browser/dataset/{submitter_id}?datasetTab=abstract",
                 "source_url_middle": f"/data/download/{submitter_id}/",
-                "contributors": super().handle_contributor(
+                "contributors": super().handle_name_object(
                     dataset_description["contributor_name"]
                 ),
                 "keywords": dataset_description["keywords"],

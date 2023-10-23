@@ -439,7 +439,7 @@ async def get_gen3_graphql_pagination(
     connection: dict = Depends(ES.check_service_status),
 ):
     """
-    /graphql/pagination/?search=<string>
+    /graphql/pagination?search=<string>
 
     Return filtered/searched metadata records. The API uses GraphQL query language.
 
@@ -504,7 +504,7 @@ async def get_gen3_filter(
     connection: dict = Depends(ES.check_service_status),
 ):
     """
-    /filter/?sidebar=<boolean>
+    /filter?sidebar=<boolean>
 
     Return the support data for portal filters component.
 

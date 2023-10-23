@@ -1,8 +1,18 @@
+"""
+Base formatting class
+- handle_thumbnail
+- handle_manifest
+- handle_name_object
+"""
 import json
 import re
 
 
 class Formatter:
+    """
+    Functionality for formatting data
+    """
+
     def handle_thumbnail(self, data):
         """
         Handler for updating thumbnail
@@ -88,6 +98,7 @@ class Formatter:
                     self._handle_empty(_["is_source_of"]),
                     has_image,
                 ),
+                "additional_metadata": self._handle_empty(_["additional_metadata"]),
                 "additional_mimetype": {
                     "name": self._handle_empty(_["additional_types"])
                 },
@@ -118,14 +129,22 @@ class Formatter:
             result.append(item)
         return result
 
-    def handle_contributor(self, data):
+    def handle_name_object(self, data, capitalize=False):
         """
-        Handler for updating the contributor format
+        Handler for updating string content to object format.
+        For fields in dataset_description node.
+        [
+            {"name": ""},
+            ...
+        ]
         """
         result = []
         if not data:
             return result
         for _ in data:
-            contributor = {"name": _}
-            result.append(contributor)
+            if capitalize:
+                name = {"name": _.capitalize()}
+            else:
+                name = {"name": _}
+            result.append(name)
         return result
