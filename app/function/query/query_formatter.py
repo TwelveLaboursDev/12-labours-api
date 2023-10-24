@@ -138,6 +138,31 @@ class QueryFormatter(Formatter):
         result = list(related_facets.values())
         return result
 
+    def handle_time(self, data):
+        """
+        Handler for updating time format.
+        """
+        ymd_index = data.find("T")
+        ymd = data[:ymd_index]
+        # hms_index = data.find(".")
+        # hms = data[ymd_index + 1 : hms_index]
+        # time = ymd + " " + hms
+        return ymd
+
+    def handle_contributor_orcid(self, data):
+        """
+        Handler for updating contributor format.
+        """
+        result = []
+        if not data:
+            return result
+        for _ in data:
+            url = _
+            if "https://orcid.org/" not in url:
+                url = "https://orcid.org/" + url
+            result.append(url)
+        return result
+
     def handle_contributor(self, data):
         """
         Handler for updating contributor format.
@@ -167,7 +192,9 @@ class QueryFormatter(Formatter):
             "contributors": self.handle_contributor(
                 dataset_description["contributor_name"]
             ),
-            "contributor_orcid": dataset_description["contributor_orcid"],
+            "contributor_orcids": self.handle_contributor_orcid(
+                dataset_description["contributor_orcid"]
+            ),
             "contributor_affiliation": dataset_description["contributor_affiliation"],
             "identifier": dataset_description["identifier"],
             "identifier_type": dataset_description["identifier_type"],
@@ -195,8 +222,8 @@ class QueryFormatter(Formatter):
             "dicomImages": super().handle_manifest(
                 uuid, preview_url_middle, data["dicomImages"]
             ),
-            "created": data["created_datetime"],
-            "updated": data["updated_datetime"],
+            "created": self.handle_time(data["created_datetime"]),
+            "updated": self.handle_time(data["updated_datetime"]),
         }
         return dataset_format
 
