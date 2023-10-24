@@ -66,6 +66,6 @@ class QueryLogic:
         # One for public, another one for private
         # Show private dataset by default if user has the authority
         fetch_result = self._handle_thread_fetch(items)
-        if "private" in fetch_result and fetch_result["private"] != []:
+        if "private" in fetch_result and fetch_result["private"]:
             return fetch_result["private"]
         return fetch_result["public"]

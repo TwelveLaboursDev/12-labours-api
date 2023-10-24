@@ -406,7 +406,7 @@ async def get_gen3_graphql_query(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid query node is used",
         )
-    if item.node == "experiment_query" and item.search != "":
+    if item.node == "experiment_query" and item.search:
         raise HTTPException(
             status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
             detail="Search does not provide in current node",
@@ -441,7 +441,7 @@ async def get_gen3_graphql_pagination(
     connection: dict = Depends(ES.check_service_status),
 ):
     """
-    /graphql/pagination/?search=<string>
+    /graphql/pagination?search=<string>
 
     Return filtered/searched metadata records. The API uses GraphQL query language.
 
@@ -488,7 +488,7 @@ async def get_gen3_graphql_pagination(
         )
     return JSONResponse(
         content={
-            "items": PF.reconstruct_data_structure(query_result),
+            "items": PF.construct_pagination_format(query_result),
             "numberPerPage": item.limit,
             "total": data_count,
         },
@@ -508,7 +508,7 @@ async def get_gen3_filter(
     connection: dict = Depends(ES.check_service_status),
 ):
     """
-    /filter/?sidebar=<boolean>
+    /filter?sidebar=<boolean>
 
     Return the support data for portal filters component.
 

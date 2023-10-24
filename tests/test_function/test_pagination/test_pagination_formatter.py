@@ -5,8 +5,8 @@ from tests.test_function.test_pagination.fixture import (
 )
 
 
-def test_reconstruct_data_structure(pf_class, dummy_pagination_data):
-    result = pf_class.reconstruct_data_structure(dummy_pagination_data)[0]
+def test_construct_pagination_format(pf_class, dummy_pagination_data):
+    result = pf_class.construct_pagination_format(dummy_pagination_data)[0]
     assert (
         result["data_url_suffix"]
         == "/data/browser/dataset/dummy submitter?datasetTab=abstract"
@@ -21,7 +21,7 @@ def test_reconstruct_data_structure(pf_class, dummy_pagination_data):
         },
     ]
     assert result["keywords"] == [
-        "dummy keyword",
+        "Dummy keyword",
     ]
     assert result["numberSamples"] == 12
     assert result["numberSubjects"] == 12
@@ -37,6 +37,7 @@ def test_reconstruct_data_structure(pf_class, dummy_pagination_data):
     assert result["plots"] == [
         {
             "image_url": "",
+            "additional_metadata": "",
             "additional_mimetype": {
                 "name": "text/vnd.abi.plot+csv",
             },
@@ -87,6 +88,7 @@ def test_reconstruct_data_structure(pf_class, dummy_pagination_data):
     assert result["scaffoldViews"] == [
         {
             "image_url": "/data/preview/dummy submitter/dummy_filepath/dummy_thumbnail.jpeg",
+            "additional_metadata": "",
             "additional_mimetype": {
                 "name": "application/x.vnd.abi.scaffold.view+json",
             },
@@ -137,6 +139,7 @@ def test_reconstruct_data_structure(pf_class, dummy_pagination_data):
     assert result["scaffolds"] == [
         {
             "image_url": "",
+            "additional_metadata": "",
             "additional_mimetype": {
                 "name": "application/x.vnd.abi.scaffold.meta+json",
             },
@@ -187,6 +190,7 @@ def test_reconstruct_data_structure(pf_class, dummy_pagination_data):
         },
         {
             "image_url": "",
+            "additional_metadata": "",
             "additional_mimetype": {
                 "name": "application/x.vnd.abi.scaffold.meta+json",
             },
@@ -245,6 +249,7 @@ def test_reconstruct_data_structure(pf_class, dummy_pagination_data):
     assert result["thumbnails"] == [
         {
             "image_url": "/data/preview/dummy submitter/dummy_filepath/dummy_filename.jpg",
+            "additional_metadata": "dummy_additional_metadata",
             "additional_mimetype": {
                 "name": "",
             },
@@ -297,6 +302,7 @@ def test_reconstruct_data_structure(pf_class, dummy_pagination_data):
     assert result["mris"] == [
         {
             "image_url": "",
+            "additional_metadata": "",
             "additional_mimetype": {
                 "name": "",
             },
@@ -349,6 +355,7 @@ def test_reconstruct_data_structure(pf_class, dummy_pagination_data):
     assert result["dicomImages"] == [
         {
             "image_url": "",
+            "additional_metadata": "",
             "additional_mimetype": {
                 "name": "application/dicom",
             },
@@ -398,4 +405,4 @@ def test_reconstruct_data_structure(pf_class, dummy_pagination_data):
             "name": "dummy_filename.dcm",
         },
     ]
-    assert result["detailsReady"] == True
+    assert result["detailsReady"] is True

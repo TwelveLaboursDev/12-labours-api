@@ -5,7 +5,6 @@ Functionality for implementing data searching
 """
 import re
 
-from fastapi import HTTPException, status
 from irods.models import Collection, DataObjectMeta
 
 from app.config import iRODSConfig
@@ -36,13 +35,6 @@ class SearchLogic:
                     irods_query = irods_.process_keyword_search(self.__search, keyword)
                     if len(irods_query.all()) > 0:
                         search_result.append(irods_query)
-            # Any keyword that does not match with the database content will cause search no result
-            if not search_result:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="There is no matched content in the database",
-                )
-
             for query in search_result:
                 for _ in query:
                     exist = re.findall(
@@ -79,7 +71,7 @@ class SearchLogic:
         """
         # Search result has order, we need to update item.filter value based on search result
         # The relationship between search and filter will always be AND
-        if item.filter != {}:
+        if item.filter:
             datasets = []
             for dataset_id in item.search["submitter_id"]:
                 if dataset_id in item.filter["submitter_id"]:

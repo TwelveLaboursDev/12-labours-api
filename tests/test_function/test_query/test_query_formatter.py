@@ -19,53 +19,345 @@ def test_process_data_output_mode_detail(qf_class, dummy_query_data):
     qf_class.set_query_mode(mode)
     qf_class.set_private_filter({})
     output = qf_class.process_data_output(dummy_query_data)
-    assert output["detail"]["mris"] == [
+    detail = output["detail"]
+    assert detail["source_url_middle"] == "/data/download/dummy submitter/"
+    assert detail["contributors"] == [
+        "dummy name",
+    ]
+    assert detail["contributor_orcids"] == [
+        "https://orcid.org/dummy orcid 1",
+        "https://orcid.org/dummy orcid 2",
+    ]
+    assert detail["contributor_affiliation"] == [
+        "dummy affiliation",
+    ]
+    assert detail["identifier"] == [
+        "dummy identifier",
+    ]
+    assert detail["identifier_type"] == [
+        "dummy identifier type",
+    ]
+    assert detail["keywords"] == [
+        "Dummy keyword",
+    ]
+    assert detail["numberSamples"] == 12
+    assert detail["numberSubjects"] == 12
+    assert detail["study_purpose"] == [
+        "dummy purpose",
+    ]
+    assert detail["name"] == "dummy title"
+    assert detail["subname"] == "dummy subtitle"
+    assert detail["datasetId"] == "dummy submitter"
+    assert detail["plots"] == [
         {
-            "additional_metadata": None,
-            "additional_types": None,
-            "description": "NA",
-            "file_type": ".nrrd",
-            "filename": "primary/sub-dummy/sam-dummy/dummy_filename.nrrd",
-            "id": "dummy id",
-            "is_derived_from": None,
-            "is_described_by": None,
-            "is_source_of": None,
-            "submitter_id": "dummy submitter",
-            "supplemental_json_metadata": None,
-            "timestamp": "dummy timestamp",
-            "type": "manifest",
+            "image_url": "",
+            "additional_metadata": "",
+            "additional_mimetype": {
+                "name": "text/vnd.abi.plot+tab-separated-values",
+            },
+            "datacite": {
+                "isDerivedFrom": {
+                    "path": [
+                        "",
+                    ],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "isDescribedBy": {
+                    "path": [
+                        "",
+                    ],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "isSourceOf": {
+                    "path": [""],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "supplemental_json_metadata": {
+                    "description": "",
+                },
+            },
+            "dataset": {
+                "identifier": "dummy id",
+                "path": "dummy_filepath/dummy_filename.csv",
+            },
+            "file_type": {
+                "name": ".csv",
+            },
+            "identifier": "dummy id",
+            "name": "dummy_filename.csv",
         },
         {
-            "additional_metadata": None,
-            "additional_types": None,
-            "description": "NA",
-            "file_type": ".nrrd",
-            "filename": "primary/sub-dummy/sam-dummy/dummy_filename_extra.nrrd",
-            "id": "dummy id",
-            "is_derived_from": None,
-            "is_described_by": None,
-            "is_source_of": None,
-            "submitter_id": "dummy submitter",
-            "supplemental_json_metadata": None,
-            "timestamp": "dummy timestamp",
-            "type": "manifest",
+            "image_url": "",
+            "additional_metadata": "",
+            "additional_mimetype": {
+                "name": "text/vnd.abi.plot+csv",
+            },
+            "datacite": {
+                "isDerivedFrom": {
+                    "path": [
+                        "",
+                    ],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "isDescribedBy": {
+                    "path": [
+                        "",
+                    ],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "isSourceOf": {
+                    "path": [""],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "supplemental_json_metadata": {
+                    "description": "",
+                },
+            },
+            "dataset": {
+                "identifier": "dummy id",
+                "path": "dummy_filepath/dummy_filename.csv",
+            },
+            "file_type": {
+                "name": ".csv",
+            },
+            "identifier": "dummy id",
+            "name": "dummy_filename.csv",
         },
     ]
-    assert output["detail"]["dicomImages"] == [
+    assert detail["scaffoldViews"] == []
+    assert detail["scaffolds"] == [
         {
-            "additional_metadata": None,
-            "additional_types": "application/dicom",
-            "description": "NA",
-            "file_type": ".dcm",
-            "filename": "primary/sub-dummy/sam-dummy/1-01.dcm",
-            "id": "dummy id",
-            "is_derived_from": None,
-            "is_described_by": None,
-            "is_source_of": None,
-            "submitter_id": "dummy submitter",
-            "supplemental_json_metadata": None,
-            "timestamp": "dummy timestamp",
-            "type": "manifest",
+            "image_url": "",
+            "additional_metadata": "",
+            "additional_mimetype": {
+                "name": "application/x.vnd.abi.scaffold.meta+json",
+            },
+            "datacite": {
+                "isDerivedFrom": {
+                    "path": [
+                        "",
+                    ],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "isDescribedBy": {
+                    "path": [
+                        "",
+                    ],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "isSourceOf": {
+                    "path": [
+                        "dummy_filepath/dummy_view.json",
+                    ],
+                    "relative": {
+                        "path": [
+                            "dummy_view.json",
+                        ],
+                    },
+                },
+                "supplemental_json_metadata": {
+                    "description": "",
+                },
+            },
+            "dataset": {
+                "identifier": "dummy id",
+                "path": "dummy_filepath/dummy_filename.json",
+            },
+            "file_type": {
+                "name": ".json",
+            },
+            "identifier": "dummy id",
+            "name": "dummy_filename.json",
+        },
+    ]
+    assert detail["thumbnails"] == []
+    assert detail["mris"] == [
+        {
+            "image_url": "",
+            "additional_metadata": "",
+            "additional_mimetype": {
+                "name": "",
+            },
+            "datacite": {
+                "isDerivedFrom": {
+                    "path": [
+                        "",
+                    ],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "isDescribedBy": {
+                    "path": [
+                        "",
+                    ],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "isSourceOf": {
+                    "path": [
+                        "",
+                    ],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "supplemental_json_metadata": {
+                    "description": "",
+                },
+            },
+            "dataset": {
+                "identifier": "dummy id",
+                "path": "dummy_filepath/sub-dummy/sam-dummy/dummy_filename.nrrd",
+            },
+            "file_type": {
+                "name": ".nrrd",
+            },
+            "identifier": "dummy id",
+            "name": "dummy_filename.nrrd",
+        },
+        {
+            "image_url": "",
+            "additional_metadata": "",
+            "additional_mimetype": {
+                "name": "",
+            },
+            "datacite": {
+                "isDerivedFrom": {
+                    "path": [
+                        "",
+                    ],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "isDescribedBy": {
+                    "path": [
+                        "",
+                    ],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "isSourceOf": {
+                    "path": [
+                        "",
+                    ],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "supplemental_json_metadata": {
+                    "description": "",
+                },
+            },
+            "dataset": {
+                "identifier": "dummy id",
+                "path": "dummy_filepath/sub-dummy/sam-dummy/dummy_filename_extra.nrrd",
+            },
+            "file_type": {
+                "name": ".nrrd",
+            },
+            "identifier": "dummy id",
+            "name": "dummy_filename_extra.nrrd",
+        },
+    ]
+    assert detail["dicomImages"] == [
+        {
+            "image_url": "",
+            "additional_metadata": "",
+            "additional_mimetype": {
+                "name": "application/dicom",
+            },
+            "datacite": {
+                "isDerivedFrom": {
+                    "path": [
+                        "",
+                    ],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "isDescribedBy": {
+                    "path": [
+                        "",
+                    ],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "isSourceOf": {
+                    "path": [
+                        "",
+                    ],
+                    "relative": {
+                        "path": [
+                            "",
+                        ],
+                    },
+                },
+                "supplemental_json_metadata": {
+                    "description": "",
+                },
+            },
+            "dataset": {
+                "identifier": "dummy id",
+                "path": "dummy_filepath/sub-dummy/sam-dummy/1-01.dcm",
+            },
+            "file_type": {
+                "name": ".dcm",
+            },
+            "identifier": "dummy id",
+            "name": "1-01.dcm",
         },
     ]
     assert output["facet"] == {
@@ -220,13 +512,13 @@ def test_process_data_output_mode_mri(qf_class, dummy_query_data):
     output = qf_class.process_data_output(dummy_query_data)
     assert output[mode] == {
         "dummy_filename": [
-            "primary/sub-dummy/sam-dummy/dummy_filename_c0.nrrd",
-            "primary/sub-dummy/sam-dummy/dummy_filename_c1.nrrd",
-            "primary/sub-dummy/sam-dummy/dummy_filename_c2.nrrd",
-            "primary/sub-dummy/sam-dummy/dummy_filename_c3.nrrd",
-            "primary/sub-dummy/sam-dummy/dummy_filename_c4.nrrd",
+            "dummy_filepath/sub-dummy/sam-dummy/dummy_filename_c0.nrrd",
+            "dummy_filepath/sub-dummy/sam-dummy/dummy_filename_c1.nrrd",
+            "dummy_filepath/sub-dummy/sam-dummy/dummy_filename_c2.nrrd",
+            "dummy_filepath/sub-dummy/sam-dummy/dummy_filename_c3.nrrd",
+            "dummy_filepath/sub-dummy/sam-dummy/dummy_filename_c4.nrrd",
         ],
         "dummy_filename_extra": [
-            "primary/sub-dummy/sam-dummy/dummy_filename_extra_c0.nrrd",
+            "dummy_filepath/sub-dummy/sam-dummy/dummy_filename_extra_c0.nrrd",
         ],
     }
