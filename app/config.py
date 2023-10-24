@@ -39,7 +39,6 @@ class iRODSConfig:
 
     IRODS_HOST = os.environ.get("IRODS_HOST")
     IRODS_PORT = os.environ.get("IRODS_PORT")
-    IRODS_PORT_EP = os.environ.get("IRODS_PORT_EP")
     IRODS_USER = os.environ.get("IRODS_USER")
     IRODS_PASSWORD = os.environ.get("IRODS_PASSWORD")
     IRODS_ZONE = os.environ.get("IRODS_ZONE")

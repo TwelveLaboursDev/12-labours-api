@@ -138,7 +138,7 @@ class Authenticator:
         """
         Handler for generating gen3 access_token to limit user access scope
         """
-        user_yaml = self.__es.use("irods").process_gen3_user_yaml()
+        user_yaml = self.__es.use("irods_1247").process_gen3_user_yaml()
         user = self._handle_user_authority(identity, user_yaml)
         access_token = jwt.encoding_token(
             {

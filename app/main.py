@@ -148,6 +148,7 @@ PL = PaginationLogic(FE, FilterLogic(), SearchLogic(ES), ES)
 QF = QueryFormatter(FE)
 QL = QueryLogic(ES)
 A = Authenticator(ES)
+PORTS = iRODSConfig.IRODS_PORT.split(",")
 
 
 @app.on_event("startup")
@@ -209,7 +210,7 @@ async def create_gen3_access(
 
     Example identity: email@gmail.com>machine_id>expiration_time
     """
-    if connection["gen3"] is None or connection["irods"] is None:
+    if connection["gen3"] is None or connection["irods_1247"] is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Please check the service (Gen3/iRODS) status",
@@ -415,11 +416,18 @@ async def get_gen3_graphql_pagination(
     **search(parameter)**:
     - string content
     """
-    if connection["gen3"] is None or connection["irods"] is None:
+    if connection["gen3"] is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Please check the service (Gen3/iRODS) status",
+            detail="Please check the service (Gen3) status",
         )
+    if search:
+        for port in PORTS:
+            if connection[f"irods_{port}"] is None:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Please check the service (iRODS) status",
+                )
 
     PL.set_private_filter(_handle_private_filter(access_scope))
     item.access = access_scope
@@ -486,11 +494,12 @@ async def get_irods_collection(
 
     Root folder will be returned if no item or "/" is passed.
     """
-    if connection["irods"] is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Please check the service (iRODS) status",
-        )
+    for port in PORTS:
+        if connection[f"irods_{port}"] is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Please check the service (iRODS) status",
+            )
     if not re.match("(/(.)*)+", item.path):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -508,19 +517,25 @@ async def get_irods_collection(
             )
         return collection
 
-    try:
-        collect = connection["irods"].collections.get(
-            f"{iRODSConfig.IRODS_ROOT_PATH}{item.path}"
-        )
-        folder = handle_collection(collect.subcollections)
-        file = handle_collection(collect.data_objects)
-        result = {"folders": folder, "files": file}
-        return result
-    except Exception as error:
+    collects = []
+    for port in PORTS:
+        try:
+            collect = connection[f"irods_{port}"].collections.get(
+                f"{iRODSConfig.IRODS_ROOT_PATH}{item.path}"
+            )
+            collects.append(collect)
+        except Exception:
+            pass
+    if not collects:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Data not found in the provided path",
-        ) from error
+        )
+
+    folder = handle_collection(collects[0].subcollections)
+    file = handle_collection(collects[0].data_objects)
+    result = {"folders": folder, "files": file}
+    return result
 
 
 @app.get(
@@ -544,27 +559,34 @@ async def get_irods_data_file(
     """
     chunk_size = 1024 * 1024 * 1024
 
-    if connection["irods"] is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Please check the service (iRODS) status",
-        )
+    for port in PORTS:
+        if connection[f"irods_{port}"] is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Please check the service (iRODS) status",
+            )
     if action not in ["preview", "download"]:
         raise HTTPException(
             status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
             detail=f"The action ({action}) is not provided in this API",
         )
 
-    try:
-        file = connection["irods"].data_objects.get(
-            f"{iRODSConfig.IRODS_ROOT_PATH}/{filepath}"
-        )
-        filename = file.name
-    except Exception as error:
+    files = []
+    for port in PORTS:
+        try:
+            file = connection[f"irods_{port}"].data_objects.get(
+                f"{iRODSConfig.IRODS_ROOT_PATH}/{filepath}"
+            )
+            files.append(file.name)
+        except Exception:
+            pass
+    if not files:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Data not found in the provided path",
-        ) from error
+        )
+
+    filename = files[0]
 
     def handle_header():
         header = None

@@ -4,6 +4,7 @@ Functionality for using external service
 - check_service_status
 """
 
+from app.config import iRODSConfig
 from services.gen3.gen3_service import Gen3Service
 from services.gen3.sgqlc import SimpleGraphQLClient
 from services.irods.irods_service import iRODSService
@@ -22,22 +23,18 @@ class ExternalService:
                 "connection": None,
                 "status": False,
             },
-            "irods": {
-                "object": iRODSService("irods"),
-                "connection": None,
-                "status": False,
-            },
-            "irods_ep": {
-                "object": iRODSService("irods_ep"),
-                "connection": None,
-                "status": False,
-            },
             "orthanc": {
                 "object": OrthancService(),
                 "connection": None,
                 "status": False,
             },
         }
+        for port in iRODSConfig.IRODS_PORT.split(","):
+            self.__services[f"irods_{port}"] = {
+                "object": iRODSService(port),
+                "connection": None,
+                "status": False,
+            }
 
     def use(self, service):
         """

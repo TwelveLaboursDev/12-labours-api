@@ -30,8 +30,8 @@ class SearchLogic:
         dataset_dict = {}
         for keyword in keyword_list:
             search_result = []
-            for rods in ["irods", "irods_ep"]:
-                irods_ = self.__es.use(rods)
+            for port in iRODSConfig.IRODS_PORT.split(","):
+                irods_ = self.__es.use(f"irods_{port}")
                 if irods_:
                     irods_query = irods_.process_keyword_search(self.__search, keyword)
                     if len(irods_query.all()) > 0:

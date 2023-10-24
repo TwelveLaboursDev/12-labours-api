@@ -29,12 +29,8 @@ class iRODSService:
     iRODS service functionality
     """
 
-    def __init__(self, irods):
-        self.__irods = irods
-        self.__irods_port = {
-            "irods": iRODSConfig.IRODS_PORT,
-            "irods_ep": iRODSConfig.IRODS_PORT_EP,
-        }
+    def __init__(self, port):
+        self.__irods_port = port
         self.__session = None
         self.__status = False
 
@@ -87,15 +83,14 @@ class iRODSService:
         """
         Handler for checking irods session status
         """
-        if self.__irods_port[self.__irods]:
-            try:
-                self.__session.collections.get(iRODSConfig.IRODS_ROOT_PATH)
-                self.__status = True
-            except Exception as error:
-                logging.warning("iRODS disconnected.")
-                logger.error(error)
-                self.__session = None
-                self.__status = False
+        try:
+            self.__session.collections.get(iRODSConfig.IRODS_ROOT_PATH)
+            self.__status = True
+        except Exception as error:
+            logging.warning("iRODS disconnected.")
+            logger.error(error)
+            self.__session = None
+            self.__status = False
 
     def get_connection(self):
         """
@@ -107,18 +102,17 @@ class iRODSService:
         """
         Handler for connecting irods session service
         """
-        if self.__irods_port[self.__irods]:
-            try:
-                # This function is used to connect to the iRODS server
-                # It requires "host", "port", "user", "password" and "zone" environment variables.
-                self.__session = iRODSSession(
-                    host=iRODSConfig.IRODS_HOST,
-                    port=self.__irods_port[self.__irods],
-                    user=iRODSConfig.IRODS_USER,
-                    password=iRODSConfig.IRODS_PASSWORD,
-                    zone=iRODSConfig.IRODS_ZONE,
-                )
-                # self.__session.connection_timeout =
-                self.status()
-            except Exception:
-                logger.error("Failed to create the iRODS session.")
+        try:
+            # This function is used to connect to the iRODS server
+            # It requires "host", "port", "user", "password" and "zone" environment variables.
+            self.__session = iRODSSession(
+                host=iRODSConfig.IRODS_HOST,
+                port=self.__irods_port,
+                user=iRODSConfig.IRODS_USER,
+                password=iRODSConfig.IRODS_PASSWORD,
+                zone=iRODSConfig.IRODS_ZONE,
+            )
+            # self.__session.connection_timeout =
+            self.status()
+        except Exception:
+            logger.error("Failed to create the iRODS session.")
