@@ -130,8 +130,9 @@ class PaginationLogic:
         displayed_dataset = self._handle_dataset(query_result)
 
         items = []
-        private_access = list(set(item.access) - set(self.__public_access))
-        if private_access and match_pair:
+        # match_pair only exist when there is private_access
+        if match_pair:
+            private_access = list(set(item.access) - set(self.__public_access))
             # Query displayed datasets which have private version
             for dataset_id in match_pair:
                 if dataset_id in displayed_dataset:
@@ -142,11 +143,11 @@ class PaginationLogic:
                     )
                     items.append((query_item, dataset_id))
 
-        if not is_public_access_filtered and len(self.__public_access) == 1:
-            fetch_result = self._handle_thread_fetch(items)
-            # Replace the dataset if it has a private version
-            for dataset_id, dataset in fetch_result.items():
-                displayed_dataset[dataset_id] = dataset[0]
+            if not is_public_access_filtered:
+                fetch_result = self._handle_thread_fetch(items)
+                # Replace the dataset if it has a private version
+                for dataset_id, dataset in fetch_result.items():
+                    displayed_dataset[dataset_id] = dataset[0]
         return list(displayed_dataset.values())
 
     def get_pagination_count(self, item):
@@ -182,7 +183,7 @@ class PaginationLogic:
         # Only exist when there is extra private access
         match_pair = []
 
-        if "private_access" in fetch_result:
+        if private_access:
             private_dataset = list(
                 map(lambda d: d["submitter_id"], fetch_result["private_access"])
             )

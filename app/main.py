@@ -558,7 +558,7 @@ def _handle_irods_access(endpoint, path, access_scope):
         filter=filter_,
         access=access_scope,
     )
-    query_result = ES.get("gen3").process_graphql_query(query_item)
+    query_result = ES.use("gen3").process_graphql_query(query_item)
     accessible = list(map(lambda d: d["submitter_id"], query_result))
     if not accessible:
         raise HTTPException(
