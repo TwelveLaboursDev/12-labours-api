@@ -35,10 +35,16 @@ QUERY_ACCESS_TOKEN =
 GEN3_ENDPOINT_URL =
 GEN3_API_KEY =
 GEN3_KEY_ID =
+# Projects separated by comma
+# e.g. GEN3_PUBLIC_ACCESS = project1,project2,project3
+# Default should be one port
 GEN3_PUBLIC_ACCESS =
 
 IRODS_HOST =
 IRODS_PASSWORD =
+# Ports separated by comma
+# e.g. IRODS_PORT = port1,port2
+# Default should be one port
 IRODS_PORT =
 IRODS_USER =
 IRODS_ZONE =
@@ -48,6 +54,11 @@ ORTHANC_ENDPOINT_URL =
 ORTHANC_USERNAME =
 ORTHANC_PASSWORD =
 ```
+
+There are two available modes:
+1. One public project and several private projects (Default functionality is developed in this mode),
+2. Several public projects (If several public projects are set, duplicate submitter id is NOT accepted.)
+Both mode can connect to one or more irods at the same time.
 
 ## Running the app
 
@@ -148,6 +159,8 @@ $ export PYTHONPATH=.
 # Run the pytest, optional to use --timeout= to limit the time for each test case
 $ pytest (--timeout=<time in second>)
 ```
+
+Test is written for mode 1 which is mentioned in ENV part.
 
 # Developer Code Standards
 
