@@ -1,13 +1,14 @@
 """
 Functional APIs provided by the server
 - /access/token
+- /access/oneoff
 - /access/revoke
 - /record/{uuid}
-- /graphql/query/?mode=data/detail/facet/mri
-- /graphql/pagination/?search=<string>
-- /filter/?sidebar=<boolean>
+- /graphql/query?mode=data/detail/facet/mri
+- /graphql/pagination?search=<string>
+- /filter?sidebar=<boolean>
 - /collection
-- /data/{action}/{filepath:path}
+- /data/{action}/{filepath:path}?token=<token>
 - /instance
 - /dicom/export/{identifier}
 """
@@ -19,7 +20,7 @@ import time
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from fastapi_utils.tasks import repeat_every
 from pyorthanc import find
 
@@ -37,6 +38,7 @@ from app.data_schema import (
     collection_responses,
     filter_responses,
     instance_responses,
+    one_off_access_responses,
     pagination_responses,
     query_responses,
     record_responses,
@@ -134,7 +136,10 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-File-Name"],
+    expose_headers=[
+        "X-File-Name",
+        "X-One-Off",
+    ],
 )
 
 CONNECTION = None
@@ -188,7 +193,7 @@ async def root():
     """
     Root
     """
-    return "This is the fastapi backend."
+    return "This is the 12 Labours Portal backend."
 
 
 ######################
@@ -199,31 +204,56 @@ async def root():
 @app.post(
     "/access/token",
     tags=["Access"],
-    summary="Create gen3 access token for authorized user",
+    summary="Create access token for authorized user",
     responses=access_token_responses,
 )
-async def create_gen3_access(
-    item: IdentityItem, connection: dict = Depends(ES.check_service_status)
+async def create_access(
+    item: IdentityItem,
+    connection: dict = Depends(ES.check_service_status),
 ):
     """
-    Return user identity and the authorized access token.
+    Return the access token.
 
-    Example identity: email@gmail.com>machine_id>expiration_time
+    **Email**
+    - email@gmail.com
+
+    **Machine**
+    - machine_id
+
+    **Expiration**
+    - expiration_time
     """
     if connection["gen3"] is None or connection["irods_1247"] is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Please check the service (Gen3/iRODS) status",
         )
-    if item.identity is None:
+    if item.email is None or item.machine is None or item.expiration is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing field in the request body",
+            detail="Missing one or more fields in the request body",
         )
-
     result = {
-        "identity": item.identity,
-        "access_token": A.generate_access_token(item.identity),
+        "access_token": A.generate_access_token(item),
+    }
+    return result
+
+
+@app.get(
+    "/access/oneoff",
+    tags=["Access"],
+    summary="Create one off access token for authorized user",
+    responses=one_off_access_responses,
+)
+async def create_one_off_access(
+    authority: dict = Depends(A.handle_get_authority),
+):
+    """
+    Return the one off access token.
+    Used for preview and download endpoint.
+    """
+    result = {
+        "one_off_token": authority["one_off_token"],
     }
     return result
 
@@ -231,17 +261,23 @@ async def create_gen3_access(
 @app.delete(
     "/access/revoke",
     tags=["Access"],
-    summary="Revoke gen3 access for authorized user",
+    summary="Revoke access for authorized user",
     responses=access_revoke_responses,
 )
-async def revoke_gen3_access(is_revoked: bool = Depends(A.handle_revoke_authority)):
+async def revoke_access(
+    revoke: bool = Depends(A.handle_revoke_authority),
+):
     """
     Return revoke message if success.
     """
-    if is_revoked:
-        raise HTTPException(
-            status_code=status.HTTP_200_OK, detail="Revoke access successfully"
-        )
+    content = {
+        "message": "Successfully revoke the access",
+    }
+    status_code = status.HTTP_200_OK
+    if not revoke:
+        content["message"] = "Unable to remove default access authority"
+        # status_code = status.HTTP_401_UNAUTHORIZED
+    return JSONResponse(status_code=status_code, content=content)
 
 
 #########################
@@ -257,7 +293,7 @@ async def revoke_gen3_access(is_revoked: bool = Depends(A.handle_revoke_authorit
 )
 async def get_gen3_record(
     uuid: str,
-    access_scope: list = Depends(A.handle_get_authority),
+    authority: dict = Depends(A.handle_get_authority),
     connection: dict = Depends(ES.check_service_status),
 ):
     """
@@ -272,19 +308,26 @@ async def get_gen3_record(
         )
 
     def handle_access(access):
-        access_list = access[0].split("-")
+        access_list = access.split("-")
         return access_list[0], access_list[1]
 
-    program, project = handle_access(access_scope)
-    record = connection["gen3"].export_record(program, project, uuid, "json")
-    if "message" in record:
+    records = []
+    # The uuid is unique, so there will only be zero or one record in all projects
+    for access in authority["access_scope"]:
+        program, project = handle_access(access)
+        record = connection["gen3"].export_record(program, project, uuid, "json")
+        if "message" not in record:
+            records.append(record[0])
+    if not records:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"{record['message']} and check if the correct project or uuid is used",
+            detail="Data does not exist or unable to access the data",
         )
 
-    result = {"record": record[0]}
-    return result
+    return JSONResponse(
+        content={"record": records[0]},
+        headers={"X-One-Off": authority["one_off_token"]},
+    )
 
 
 def _handle_private_filter(access_scope):
@@ -302,7 +345,7 @@ def _handle_private_filter(access_scope):
 
 
 @app.post(
-    "/graphql/query/",
+    "/graphql/query",
     tags=["Gen3"],
     summary="GraphQL query gen3 metadata information",
     responses=query_responses,
@@ -310,7 +353,7 @@ def _handle_private_filter(access_scope):
 async def get_gen3_graphql_query(
     item: GraphQLQueryItem,
     mode: ModeParam,
-    access_scope: list = Depends(A.handle_get_authority),
+    authority: dict = Depends(A.handle_get_authority),
     connection: dict = Depends(ES.check_service_status),
 ):
     """
@@ -370,8 +413,8 @@ async def get_gen3_graphql_query(
         )
 
     QF.set_query_mode(mode)
-    QF.set_private_filter(_handle_private_filter(access_scope))
-    item.access = access_scope
+    QF.set_private_filter(_handle_private_filter(authority["access_scope"]))
+    item.access = authority["access_scope"]
     query_result = QL.get_query_data(item)
 
     def handle_result():
@@ -379,11 +422,14 @@ async def get_gen3_graphql_query(
             return query_result[0]
         return query_result
 
-    return QF.process_data_output(handle_result())
+    return JSONResponse(
+        content=QF.process_data_output(handle_result()),
+        headers={"X-One-Off": authority["one_off_token"]},
+    )
 
 
 @app.post(
-    "/graphql/pagination/",
+    "/graphql/pagination",
     tags=["Gen3"],
     summary="Display datasets",
     responses=pagination_responses,
@@ -391,7 +437,7 @@ async def get_gen3_graphql_query(
 async def get_gen3_graphql_pagination(
     item: GraphQLPaginationItem,
     search: str = "",
-    access_scope: list = Depends(A.handle_get_authority),
+    authority: dict = Depends(A.handle_get_authority),
     connection: dict = Depends(ES.check_service_status),
 ):
     """
@@ -429,8 +475,8 @@ async def get_gen3_graphql_pagination(
                     detail="Please check the service (iRODS) status",
                 )
 
-    PL.set_private_filter(_handle_private_filter(access_scope))
-    item.access = access_scope
+    PL.set_private_filter(_handle_private_filter(authority["access_scope"]))
+    item.access = authority["access_scope"]
     is_public_access_filtered = PL.process_pagination_item(item, search)
     data_count, match_pair = PL.get_pagination_count(item)
     query_result = PL.get_pagination_data(item, match_pair, is_public_access_filtered)
@@ -440,23 +486,26 @@ async def get_gen3_graphql_pagination(
             query_result,
             key=lambda dict: item.filter["submitter_id"].index(dict["submitter_id"]),
         )
-    result = {
-        "items": PF.reconstruct_data_structure(query_result),
-        "numberPerPage": item.limit,
-        "total": data_count,
-    }
-    return result
+    return JSONResponse(
+        content={
+            "items": PF.reconstruct_data_structure(query_result),
+            "numberPerPage": item.limit,
+            "total": data_count,
+        },
+        headers={"X-One-Off": authority["one_off_token"]},
+    )
 
 
 @app.get(
-    "/filter/",
+    "/filter",
     tags=["Gen3"],
     summary="Get filter information",
     responses=filter_responses,
 )
 async def get_gen3_filter(
     sidebar: bool = False,
-    access_scope: list = Depends(A.handle_get_authority),
+    authority: dict = Depends(A.handle_get_authority),
+    connection: dict = Depends(ES.check_service_status),
 ):
     """
     /filter/?sidebar=<boolean>
@@ -465,11 +514,17 @@ async def get_gen3_filter(
 
     - **sidebar**: boolean content.
     """
+    if connection["gen3"] is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Please check the service (Gen3) status",
+        )
+
     retry = 0
     while retry < 12 and not FILTER_GENERATED:
         retry += 1
         time.sleep(retry)
-    FF.set_private_filter(_handle_private_filter(access_scope))
+    FF.set_private_filter(_handle_private_filter(authority["access_scope"]))
     if sidebar:
         return FF.generate_sidebar_filter_format()
     return FF.generate_filter_format()
@@ -480,6 +535,42 @@ async def get_gen3_filter(
 ############################################
 
 
+IRODS_REQUEST = {
+    "endpoint": None,
+    "additional": None,
+}
+
+
+def _handle_irods_access(endpoint, path, access_scope):
+    global PREVIOUS_REQUEST
+    dataset = list(filter(None, path.split("/")))
+    filter_ = {}
+    # Query specific dataset if submitter id exist
+    if dataset:
+        if (
+            IRODS_REQUEST["endpoint"] == endpoint
+            and IRODS_REQUEST["additional"] == dataset
+        ):
+            return
+        filter_["submitter_id"] = dataset
+    query_item = GraphQLQueryItem(
+        node="experiment_filter",
+        filter=filter_,
+        access=access_scope,
+    )
+    query_result = ES.get("gen3").process_graphql_query(query_item)
+    accessible = list(map(lambda d: d["submitter_id"], query_result))
+    if not accessible:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unable to access the data",
+        )
+
+    IRODS_REQUEST["endpoint"] = endpoint
+    IRODS_REQUEST["additional"] = dataset
+    return accessible
+
+
 @app.post(
     "/collection",
     tags=["iRODS"],
@@ -487,13 +578,20 @@ async def get_gen3_filter(
     responses=collection_responses,
 )
 async def get_irods_collection(
-    item: CollectionItem, connection: dict = Depends(ES.check_service_status)
+    item: CollectionItem,
+    authority: dict = Depends(A.handle_get_authority),
+    connection: dict = Depends(ES.check_service_status),
 ):
     """
     Return all collections from the required folder.
 
     Root folder will be returned if no item or "/" is passed.
     """
+    if connection["gen3"] is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Please check the service (Gen3) status",
+        )
     for port in PORTS:
         if connection[f"irods_{port}"] is None:
             raise HTTPException(
@@ -506,9 +604,15 @@ async def get_irods_collection(
             detail="Invalid path format is used",
         )
 
+    accessible = _handle_irods_access(
+        "/collection", item.path, authority["access_scope"]
+    )
+
     def handle_collection(data):
         collection = []
         for ele in data:
+            if item.path == "/" and ele.name not in accessible:
+                continue
             collection.append(
                 {
                     "name": ele.name,
@@ -517,23 +621,23 @@ async def get_irods_collection(
             )
         return collection
 
-    collects = []
+    colls = []
     for port in PORTS:
         try:
-            collect = connection[f"irods_{port}"].collections.get(
+            coll = connection[f"irods_{port}"].collections.get(
                 f"{iRODSConfig.IRODS_ROOT_PATH}{item.path}"
             )
-            collects.append(collect)
+            colls.append(coll)
         except Exception:
             pass
-    if not collects:
+    if not colls:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Data not found in the provided path",
         )
 
-    folder = handle_collection(collects[0].subcollections)
-    file = handle_collection(collects[0].data_objects)
+    folder = handle_collection(colls[0].subcollections)
+    file = handle_collection(colls[0].data_objects)
     result = {"folders": folder, "files": file}
     return result
 
@@ -547,6 +651,7 @@ async def get_irods_collection(
 async def get_irods_data_file(
     action: ActionParam,
     filepath: str,
+    token: str = None,
     connection: dict = Depends(ES.check_service_status),
 ):
     """
@@ -559,6 +664,11 @@ async def get_irods_data_file(
     """
     chunk_size = 1024 * 1024 * 1024
 
+    if connection["gen3"] is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Please check the service (Gen3) status",
+        )
     for port in PORTS:
         if connection[f"irods_{port}"] is None:
             raise HTTPException(
@@ -570,6 +680,9 @@ async def get_irods_data_file(
             status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
             detail=f"The action ({action}) is not provided in this API",
         )
+
+    access_scope = A.handle_get_one_off_authority(token)
+    _handle_irods_access(f"/data/{action}", filepath, access_scope)
 
     files = []
     for port in PORTS:
@@ -624,7 +737,8 @@ async def get_irods_data_file(
     responses=instance_responses,
 )
 async def get_orthanc_instance(
-    item: InstanceItem, connection: dict = Depends(ES.check_service_status)
+    item: InstanceItem,
+    connection: dict = Depends(ES.check_service_status),
 ):
     """
     Return a list of dicom instance uuids
@@ -667,7 +781,8 @@ async def get_orthanc_instance(
     response_description="Successfully return a file with data",
 )
 async def get_orthanc_dicom_file(
-    identifier: str, connection: dict = Depends(ES.check_service_status)
+    identifier: str,
+    connection: dict = Depends(ES.check_service_status),
 ):
     """
     Export a specific dicom file from Orthanc server
