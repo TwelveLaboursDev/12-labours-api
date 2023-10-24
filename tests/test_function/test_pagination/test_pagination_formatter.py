@@ -21,7 +21,7 @@ def test_construct_pagination_format(pf_class, dummy_pagination_data):
         },
     ]
     assert result["keywords"] == [
-        "dummy keyword",
+        "Dummy keyword",
     ]
     assert result["numberSamples"] == 12
     assert result["numberSubjects"] == 12

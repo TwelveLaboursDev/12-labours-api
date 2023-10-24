@@ -124,7 +124,8 @@ def dummy_query_data():
                     "dummy name",
                 ],
                 "contributor_orcid": [
-                    "dummy orcid",
+                    "dummy orcid 1",
+                    "https://orcid.org/dummy orcid 2",
                 ],
                 "contributor_role": [
                     "dummy role",

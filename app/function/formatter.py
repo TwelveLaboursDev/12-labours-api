@@ -137,7 +137,6 @@ class Formatter:
         if not data:
             return result
         for _ in data:
-            keyword = _.replace(" ", "")
-            name = keyword.capitalize()
-            result.append(name)
+            keyword = _.strip().capitalize()
+            result.append(keyword)
         return result

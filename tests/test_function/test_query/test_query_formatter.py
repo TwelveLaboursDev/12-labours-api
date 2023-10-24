@@ -22,41 +22,28 @@ def test_process_data_output_mode_detail(qf_class, dummy_query_data):
     detail = output["detail"]
     assert detail["source_url_middle"] == "/data/download/dummy submitter/"
     assert detail["contributors"] == [
-        {
-            "name": "dummy name",
-        },
+        "dummy name",
     ]
     assert detail["contributor_orcids"] == [
-        {
-            "name": "dummy orcid",
-        },
+        "https://orcid.org/dummy orcid 1",
+        "https://orcid.org/dummy orcid 2",
     ]
-    assert detail["contributor_affiliations"] == [
-        {
-            "name": "dummy affiliation",
-        },
+    assert detail["contributor_affiliation"] == [
+        "dummy affiliation",
     ]
     assert detail["identifier"] == [
-        {
-            "name": "dummy identifier",
-        },
+        "dummy identifier",
     ]
     assert detail["identifier_type"] == [
-        {
-            "name": "dummy identifier type",
-        },
+        "dummy identifier type",
     ]
     assert detail["keywords"] == [
-        {
-            "name": "Dummy keyword",
-        },
+        "Dummy keyword",
     ]
     assert detail["numberSamples"] == 12
     assert detail["numberSubjects"] == 12
     assert detail["study_purpose"] == [
-        {
-            "name": "dummy purpose",
-        },
+        "dummy purpose",
     ]
     assert detail["name"] == "dummy title"
     assert detail["subname"] == "dummy subtitle"
