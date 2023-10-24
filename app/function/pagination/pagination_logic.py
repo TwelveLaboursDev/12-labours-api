@@ -246,6 +246,11 @@ class PaginationLogic:
             ):
                 has_search_result = True
                 self.__sl.implement_search_filter_relation(item)
+            if not has_search_result:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="There is no matched content in the database",
+                )
 
         # ORDER
         order_type = item.order.lower()
