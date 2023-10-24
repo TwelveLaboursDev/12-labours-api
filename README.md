@@ -37,14 +37,14 @@ GEN3_API_KEY =
 GEN3_KEY_ID =
 # Projects separated by comma
 # e.g. GEN3_PUBLIC_ACCESS = project1,project2,project3
-# Default should be one port
+# Default should be one project only
 GEN3_PUBLIC_ACCESS =
 
 IRODS_HOST =
 IRODS_PASSWORD =
 # Ports separated by comma
 # e.g. IRODS_PORT = port1,port2
-# Default should be one port
+# Default should be one port only
 IRODS_PORT =
 IRODS_USER =
 IRODS_ZONE =
