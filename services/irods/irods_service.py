@@ -29,7 +29,8 @@ class iRODSService:
     iRODS service functionality
     """
 
-    def __init__(self):
+    def __init__(self, port):
+        self.__irods_port = port
         self.__session = None
         self.__status = False
 
@@ -106,7 +107,7 @@ class iRODSService:
             # It requires "host", "port", "user", "password" and "zone" environment variables.
             self.__session = iRODSSession(
                 host=iRODSConfig.IRODS_HOST,
-                port=iRODSConfig.IRODS_PORT,
+                port=self.__irods_port,
                 user=iRODSConfig.IRODS_USER,
                 password=iRODSConfig.IRODS_PASSWORD,
                 zone=iRODSConfig.IRODS_ZONE,

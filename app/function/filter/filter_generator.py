@@ -26,7 +26,7 @@ class FilterGenerator:
         self.__fe = fe
         self.__filter_cache = fe.cache_loader()
         self.__es = es
-        self.__public_access = [Gen3Config.GEN3_PUBLIC_ACCESS]
+        self.__public_access = Gen3Config.GEN3_PUBLIC_ACCESS.split(",")
         self.__cache = {}
         self.__dynamic = DYNAMIC_FILTERS
 
@@ -85,7 +85,7 @@ class FilterGenerator:
         threads_pool = []
         for args in items:
             thread = threading.Thread(
-                target=self.__es.get("gen3").process_graphql_query, args=(*args, queue_)
+                target=self.__es.use("gen3").process_graphql_query, args=(*args, queue_)
             )
             threads_pool.append(thread)
             thread.start()

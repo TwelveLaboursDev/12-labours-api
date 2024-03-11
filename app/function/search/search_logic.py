@@ -28,21 +28,28 @@ class SearchLogic:
         """
         dataset_dict = {}
         for keyword in keyword_list:
-            search_result = self.__es.get("irods").process_keyword_search(
-                self.__search, keyword
-            )
-            for _ in search_result:
-                content_list = re.findall(
-                    rf"(\s{keyword}|{keyword}\s)", _[DataObjectMeta.value]
-                )
-                if content_list:
-                    dataset = re.sub(
-                        f"{iRODSConfig.IRODS_ROOT_PATH}/", "", _[Collection.name]
+            search_result = []
+            for port in iRODSConfig.IRODS_PORT.split(","):
+                irods_ = self.__es.use(f"irods_{port}")
+                if irods_:
+                    irods_query = irods_.process_keyword_search(self.__search, keyword)
+                    if len(irods_query.all()) > 0:
+                        search_result.append(irods_query)
+            for query in search_result:
+                for _ in query:
+                    exist = re.findall(
+                        rf"(\s{keyword}|{keyword}\s)", _[DataObjectMeta.value]
                     )
-                    if dataset not in dataset_dict:
-                        dataset_dict[dataset] = 1
-                    else:
-                        dataset_dict[dataset] += 1
+                    if exist:
+                        dataset = re.sub(
+                            f"{iRODSConfig.IRODS_ROOT_PATH}/",
+                            "",
+                            _[Collection.name],
+                        )
+                        if dataset not in dataset_dict:
+                            dataset_dict[dataset] = 1
+                        else:
+                            dataset_dict[dataset] += 1
         return dataset_dict
 
     # The datasets order is based on how the dataset content is relevant to the input_ string.

@@ -16,7 +16,7 @@ class QueryLogic:
 
     def __init__(self, es):
         self.__es = es
-        self.__public_access = [Gen3Config.GEN3_PUBLIC_ACCESS]
+        self.__public_access = Gen3Config.GEN3_PUBLIC_ACCESS.split(",")
 
     def _handle_thread_fetch(self, items):
         """
@@ -26,7 +26,7 @@ class QueryLogic:
         threads_pool = []
         for args in items:
             thread = threading.Thread(
-                target=self.__es.get("gen3").process_graphql_query, args=(*args, queue_)
+                target=self.__es.use("gen3").process_graphql_query, args=(*args, queue_)
             )
             threads_pool.append(thread)
             thread.start()
@@ -50,9 +50,11 @@ class QueryLogic:
             access=self.__public_access,
         )
         items.append((query_item, "public"))
-        if len(item.access) > 1:
-            item.access.remove(self.__public_access[0])
-            items.append((item, "private"))
+
+        private_access = list(set(item.access) - set(self.__public_access))
+        if private_access:
+            query_item.access = private_access
+            items.append((query_item, "private"))
         return items
 
     def get_query_data(self, item):
