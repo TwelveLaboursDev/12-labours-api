@@ -47,12 +47,6 @@ class iRODSService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)
             ) from error
-        # Any keyword that does not match with the database content will cause search no result
-        if len(result.all()) == 0:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="There is no matched content in the database",
-            )
 
         return result
 

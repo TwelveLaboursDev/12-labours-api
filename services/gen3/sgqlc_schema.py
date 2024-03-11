@@ -149,6 +149,8 @@ class ExperimentQuery(Node):
     manifests5 = list_of(ManifestQuery)
     manifests6 = list_of(ManifestQuery)
     cases = list_of(CaseQuery)
+    created_datetime = String
+    updated_datetime = String
 
 
 # PAGINATION USE ONLY

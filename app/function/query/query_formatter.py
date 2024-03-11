@@ -1,12 +1,15 @@
 """
 Functionality for processing query data output
 - set_query_mode
+- set_private_filter
 - process_data_output
 """
 import re
 
+from app.function.formatter import Formatter
 
-class QueryFormatter:
+
+class QueryFormatter(Formatter):
     """
     fe -> filter editor object is required
     """
@@ -128,11 +131,101 @@ class QueryFormatter:
         for _ in self._handle_facet_source():
             key = _.split(">")[0]
             field = _.split(">")[1]
-            if key in data and data[key] != []:
+            if key in data and data[key]:
                 self._update_related_facet(related_facets, field, data[key])
         if self.__query_mode == "detail":
             return related_facets
-        return list(related_facets.values())
+        result = list(related_facets.values())
+        return result
+
+    def handle_time(self, data):
+        """
+        Handler for updating time format.
+        """
+        ymd_index = data.find("T")
+        ymd = data[:ymd_index]
+        # hms_index = data.find(".")
+        # hms = data[ymd_index + 1 : hms_index]
+        # time = ymd + " " + hms
+        return ymd
+
+    def handle_contributor_orcid(self, data):
+        """
+        Handler for updating contributor format.
+        """
+        result = []
+        if not data:
+            return result
+        for _ in data:
+            url = _
+            if "https://orcid.org/" not in url:
+                url = "https://orcid.org/" + url
+            result.append(url)
+        return result
+
+    def handle_contributor(self, data):
+        """
+        Handler for updating contributor format.
+        """
+        result = []
+        if not data:
+            return result
+        for _ in data:
+            name_list = _.split(", ")
+            if len(name_list) == 2:
+                name = name_list[1] + " " + name_list[0]
+            else:
+                name = name_list[0]
+            result.append(name)
+        return result
+
+    def _construct_query_format(self, data):
+        """
+        Reconstructing the structure to support portal services
+        """
+        dataset_description = data["dataset_descriptions"][0]
+        submitter_id = data["submitter_id"]
+        uuid = data["id"]
+        preview_url_middle = f"/data/preview/{submitter_id}/"
+        dataset_format = {
+            "source_url_middle": f"/data/download/{submitter_id}/",
+            "contributors": self.handle_contributor(
+                dataset_description["contributor_name"]
+            ),
+            "contributor_orcids": self.handle_contributor_orcid(
+                dataset_description["contributor_orcid"]
+            ),
+            "contributor_affiliation": dataset_description["contributor_affiliation"],
+            "identifier": dataset_description["identifier"],
+            "identifier_type": dataset_description["identifier_type"],
+            "keywords": super().handle_keyword(dataset_description["keywords"]),
+            "numberSamples": int(dataset_description["number_of_samples"][0]),
+            "numberSubjects": int(dataset_description["number_of_subjects"][0]),
+            "study_purpose": dataset_description["study_purpose"],
+            "name": dataset_description["title"][0],
+            "subname": dataset_description["subtitle"][0],
+            "datasetId": submitter_id,
+            "plots": super().handle_manifest(uuid, preview_url_middle, data["plots"]),
+            "scaffoldViews": super().handle_manifest(
+                uuid, preview_url_middle, data["scaffoldViews"], True
+            ),
+            "scaffolds": super().handle_manifest(
+                uuid, preview_url_middle, data["scaffolds"]
+            ),
+            "thumbnails": super().handle_manifest(
+                uuid,
+                preview_url_middle,
+                super().handle_thumbnail(data["thumbnails"]),
+                True,
+            ),
+            "mris": super().handle_manifest(uuid, preview_url_middle, data["mris"]),
+            "dicomImages": super().handle_manifest(
+                uuid, preview_url_middle, data["dicomImages"]
+            ),
+            "created": self.handle_time(data["created_datetime"]),
+            "updated": self.handle_time(data["updated_datetime"]),
+        }
+        return dataset_format
 
     def _handle_mri(self, data):
         """
@@ -159,7 +252,8 @@ class QueryFormatter:
             # Keep only the first dicom data each folder
             if folder_path not in dicom_images:
                 dicom_images[folder_path] = _
-        return list(dicom_images.values())
+        result = list(dicom_images.values())
+        return result
 
     def _handle_detail_content(self, data):
         """
@@ -167,11 +261,12 @@ class QueryFormatter:
         """
         # Combine multiple files within the dataset into one
         # Only need to display one in the portal
-        if data["dicomImages"] != []:
+        if data["dicomImages"]:
             data["dicomImages"] = self._handle_dicom_image(data["dicomImages"])
-        if data["mris"] != []:
+        if data["mris"]:
             data["mris"] = self._handle_mri(data["mris"])
-        return data
+        result = self._construct_query_format(data)
+        return result
 
     def process_data_output(self, data):
         """

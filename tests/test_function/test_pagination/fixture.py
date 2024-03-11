@@ -142,7 +142,7 @@ def dummy_pagination_data():
             "submitter_id": "dummy submitter",
             "thumbnails": [
                 {
-                    "additional_metadata": None,
+                    "additional_metadata": "dummy_additional_metadata",
                     "additional_types": None,
                     "file_type": ".jpg",
                     "filename": "dummy_filepath/dummy_filename.jpg",
